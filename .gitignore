@@ -1,0 +1,8 @@
+personal
+*.txt
+*.log
+*.err
+*.so
+*.o
+*.pyc
+*.out
