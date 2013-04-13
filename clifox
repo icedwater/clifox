@@ -643,7 +643,7 @@ Return the first matching node.
      log("findElement:"+str(y)+","+str(x)+":"+str(self._display[i][1])+","+str(i))
      return i 
 
-class ActiveWindow(gui,threading.Thread):
+class ActiveWindow(gui):
  """Manages the active window (the single set of screens available to the user for one webpage)
 similar in concept to a tab in Firefox
 """
@@ -663,7 +663,6 @@ jsQ points to the queue where JS generated events are sent
 jsRoot points to the root class of js
 """
   log("thread:init:activeWindow")
-  threading.Thread.__init__(self)
   self.daemon=1
   self.start_url=start_url
   self.local_vars="screenNum,screenPos,screenPosX,url".split(",")
@@ -1038,19 +1037,17 @@ length: the maximum length for this text entry (element.attr=maxlength is the co
   if d==None:
    return None
   log("onFocus:d="+str(d)+",parentNodeNames="+str(self.js.repl.parentNodeNames(d)))
-  if not self.isOnLayoutElement(d) and "A" in self.js.repl.parentNodeNames(d):
-   if d.nodeName=="A":
-    p=d
-   else:
-    p=d.parentNodes(name="A",count=1)
-   if p.hasAttribute("href"):
-    url=p.href
-   else:
-    url=None
-   if url!=None:
-    self.setStatus(url)
-   else:
-    self.setStatus("")
+  if d.nodeName=="A":
+   p=d
+  elif not self.isOnLayoutElement(d) and "A" in self.js.repl.parentNodeNames(d):
+   p=d.parentNode
+   while p.nodeName!="A": p=p.parentNode
+  if p.hasAttribute("href"):
+   url=p.href
+  else:
+   url=None
+  if url!=None:
+   self.setStatus(url)
   else:
    self.setStatus("")
 
@@ -1512,7 +1509,7 @@ if __name__=='__main__':
  quitFlag=0
  j,q=mozCom.initCliFox()
  a=ActiveWindow(jsQ=q,jsRoot=j,start_url=[i for i in sys.argv if ":" in i][0] if [i for i in sys.argv if ":" in i] else None)
- a.start()
+ a.run()
  while 1:
   time.sleep(1)
   if quitFlag==1:
