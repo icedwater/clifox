@@ -1,25 +1,54 @@
 Rough Install Steps
+
+Note. On debian systems the packages xvfb, libgtk2.0-0 and libatk1.0-0
+are necessary in addition to any required python packages.
+
 1. Download the self-extracting Firefox from mozilla.org.
-wget "ftp://ftp.mozilla.org/pub/firefox/releases/latest/linux-x86_64/en-US/firefox-19.0.2.tar.bz2"
-bunzip2 "firefox-*.bz2"
-tar -xf "firefox-*.tar"
-2. Run xvfb-run "/path/to/firefox"
+wget "ftp://ftp.mozilla.org/pub/firefox/releases/latest/linux-x86_64/en-US/firefox-19.0.2.tar.bz2" # It's up to 20.0.2.
+
+tar -jxf "firefox-*.tar.bz2"
+
+2. cd into firefox directory and run xvfb-run "/path/to/firefox"
+
 3. Wait for about ten seconds.
+
 4. Kill the xvfb-run firefox application (ctrl-c).
-Note. Symlinks are recommended for the following steps, so that changes to the supported configs are reflected in your Firefox. Please realize that this will open your Firefox version to any vulnerabilities created by the eveloper's configs.
-5. link the prefs.js file from the firefox folder in the root of this repo to your newly created profile folder.
-e.g. ln -s /home/user/dev/clifox/firefox/prefs.js /home/user/firefox/randomid.default/prefs.js
-6. Link the mozrepl folder into your Mozilla extensions folder with the mozilla recommended format. (No, this is not your standard symlink. It is a path written to a textfile.)
-e.g. echo "$(pwd)/mozrepl" > /home/user/.mozilla/firefox/randomid.default/extensions/mozrepl\@hyperstruct.net
+
+Note. Symlinks are recommended for the following steps, so that
+changes to the supported configs are reflected in your Firefox. Please
+realize that this will open your Firefox version to any
+vulnerabilities created by the developer's configs.
+
+Note. The reference to random.id in the following statements is to
+indicate a randomly generated id used in file names and directories.
+
+5. link the prefs.js file from the firefox folder in the root of this
+repo to your newly created profile folder.  e.g. ln -sf
+~/src/clifox/firefox/prefs.js
+~/.mozilla/firefox/randomid.default/prefs.js
+
+6. Link the mozrepl folder into your Mozilla extensions folder with
+the mozilla recommended format. (No, this is not your standard
+symlink. It is a path written to a textfile.)  e.g. 
+echo "$(pwd)/mozrepl" >
+~/.mozilla/firefox/randomid.default/extensions/mozrepl\@hyperstruct.net
+
 7. Hope fervently.
+
 8. Run:
 xvfb-run /dir/to/firefox/firefox
 You should see a message such as:
+
 "I, MOZREPL : Listening : 127.0.0.1:4242"
-If not, something is wrong with the link to mozrepl, the prefs.js file, or your version of firefox.
+
+If not, something is wrong with the link to mozrepl, the prefs.js
+file, or your version of firefox.
+
 9. Run:
+mkdir ~/.clifox
 ./clifox 'http://www.linux-speakup.org/'
-If all goes well, you should be shown the homepage for the linux-speakup project. Errors are placed in ~/.clifox/clifox.log.
+
+If all goes well, you should be shown the homepage for the
+linux-speakup project. Errors are placed in ~/.clifox/clifox.log.
+
 Happy browsing.
-
-
