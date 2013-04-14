@@ -57,7 +57,7 @@ class JSClass(object):
       return ret
 #an error was thrown on the javascript side. throw it here as well as a general Exception type.
      if ret['m']=="t":
-      raise Exception(ret['a'][0])
+      raise Exception("js/"+ret['a'][0])
 #an event popped up, stick it in the q.
      if ret['m'] in ("w","e","E"):
       if ret['m'] in ("e","E"):
