@@ -168,7 +168,7 @@ class gui(forms):
  def y(self,v):
   self.curPos[0]=v
 
- formElements="TEXTAREA,BUTTON,INPUT,SELECT,OPTION".split(",")
+ formElements=set("TEXTAREA,BUTTON,INPUT,SELECT,OPTION".split(","))
  newLineMakerElements=set("BR,P".split(","))
  newLineElements=set("TITLE,HR,LI,TD,H1,H2,H3,H4,H5,H6,BR,P,A,IMG,SOUND,BGSOUND".split(","))
  [newLineElements.add(i) for i in formElements if i!="OPTION"]
@@ -724,6 +724,7 @@ jsRoot points to the root class of js
    self.dom=e.target.defaultView
    self.setStatus("page %s loaded" % (self.dom.location.href,))
    self.pageRefreshData()
+   del self.page.linkedBrowser.contentDocument
 
  def onStatusChange(self,e):
   self.setStatus(e.aMessage)
@@ -1042,6 +1043,8 @@ length: the maximum length for this text entry (element.attr=maxlength is the co
   elif not self.isOnLayoutElement(d) and "A" in self.js.repl.parentNodeNames(d):
    p=d.parentNode
    while p.nodeName!="A": p=p.parentNode
+  else:
+   return
   if p.hasAttribute("href"):
    url=p.href
   else:
@@ -1078,11 +1081,7 @@ length: the maximum length for this text entry (element.attr=maxlength is the co
    if not x:
     x=self.dom.document.getElementById(anc)
    if x: return self.moveToElem(x)
-  if d.nodeName=="A" and d.href.startswith("javascript:"):
-   href=d.href.split(":",1)[1]
-   code="py_func_"+str(time.time()).replace(".","")[-6]
-   return d.eval("function %s () { %s } %s();" % (code,href,code,))
-  if "href" not in d.attrs:
+  if d.hasAttribute("href"):
    return
   if d.nodeName=="A":
    url=d.href
