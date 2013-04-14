@@ -66,6 +66,8 @@ user_pref("privacy.sanitize.migrateFx3Prefs", true);
 user_pref("storage.vacuum.last.index", 1);
 user_pref("storage.vacuum.last.places.sqlite", 1364591645);
 user_pref("toolkit.startup.last_success", 1365815184);
+user_pref("toolkit.startup.max_resumed_crashes", -1);
+user_pref("toolkit.startup.recent_crashes", 1); 
 user_pref("toolkit.telemetry.prompted", 2);
 user_pref("urlclassifier.keyupdatetime.https://sb-ssl.google.com/safebrowsing/newkey", 1366600864);
 user_pref("xpinstall.whitelist.add", "");
