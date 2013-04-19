@@ -671,6 +671,7 @@ jsQ points to the queue where JS generated events are sent
 jsRoot points to the root class of js
 """
   log("thread:init:activeWindow")
+  self.lastMessage=""
   self.daemon=1
   self.start_url=start_url
   self.events=[]
@@ -746,7 +747,10 @@ jsRoot points to the root class of js
 
 
  def onStatusChange(self,e):
-  self.setStatus(e.aMessage)
+  m=e.aMessage
+  if self.lastMessage!=m:
+   self.setStatus(m)
+   self.lastMessage=m
 
  def event(self,e):
   self.setStatus(str(e))
@@ -851,7 +855,7 @@ used, e.g. when reading a webpage as a whole document.
   self.dom.location.href=fn
 
  def navigate(self,c=""):
-  go=self.prompt("url: ",self.entry, history=self.goHistory)
+  go=self.prompt("url: ",self.entry, history=None)
   if go=='': return
   self.dom.location.href=go
 
