@@ -8,8 +8,8 @@ import inspect
 import os,os.path
 path=os.path.realpath(__file__).rsplit(os.sep,1)[0]+"/modules"
 sys.path.append(path)
-import re,time,curses,curses.ascii,sys,Queue,utils,threading,traceback,string,hashlib,shelve,warnings,urlparse,requests,binascii,urllib,pprint
-import StringIO as stringio,mailcap,mimetypes
+import re,time,curses,curses.ascii,sys,Queue,utils,threading,traceback,string,hashlib,shelve,warnings,urlparse,binascii
+import StringIO as stringio
 import mozCom
 from guiObjects import *
 from utils import log
@@ -19,19 +19,6 @@ if "-debug" in sys.argv:
  utils.log("debugging started, port will open on 7777 when page loads")
 # import profile
  profiler=1
-
-import re
-reSplitList={}
-def reSplit(s,width):
- if width in reSplitList:
-  regc=reSplitList[width]
- else:
-  reg=r'(?:(.{0,'+str(width)+r'})(\s|$))|'
-  reg+=r'(?:(.{0,'+str(width)+r'}))'
-  regc=re.compile(reg)
-  reSplitList[width]=regc
- x=regc.findall(s)
- return ["".join(i).strip() for i in x]
 
 def generate_error_report(e=None):
  fp = stringio.StringIO()
@@ -181,10 +168,7 @@ class gui(forms):
   if t!=None:
    t=t.nextSibling
    if inList and t in inList:
-    try:
-     ret=inList.index(t)
-    except:
-     ret=None
+    ret=inList.index(t)
    else:
     ret=None
   else:
@@ -194,7 +178,7 @@ class gui(forms):
  def getElementText(self,n):
   t=n.nodeName
   t=t if t else 'unnamedNode'
-  if self.ignoreElements.intersection(self.js.repl.parentNodeNames(n)): return None
+  if self.ignoreElements.intersection(self.parentNodeNames(n)): return None
   if t=="#text":
    return n.nodeValue
   elif t=="HR":
@@ -211,14 +195,15 @@ class gui(forms):
    else:
     return "[img] unknown"
   elif t=="A":
-   if "IMG" in [i.nodeName for i in n.childNodes]:
-    x=[i for i in n.childNodes if i.nodeName=="IMG"][0]
+   x=n.getElementsByTagName("img")
+   if x.length:
+    x=x[0]
     x._flags_skip=1
     t=self.getElementText(x)
     if t.startswith("[img] "): t=t[6:]
     t="{["+t+"]}"
     return t
-   elif n.hasChildNodes() and n.textContent!="":
+   elif [i for i in self.nodes if i.parentNode==n] and n.textContent!="":
     return "{} "
    elif n.hasAttribute("href"):
     return "{"+n.getAttribute("href")+"}"
@@ -247,6 +232,17 @@ class gui(forms):
    return n.nodeValue
   else:
    return None
+
+ def parentNodeNames(self,e):
+  e=e.parentNode
+  l=[]
+  while e!=None:
+   try:
+    l.append(e.nodeName)
+   except:
+    break
+   e=e.parentNode
+  return l
 
  def getLineText(self,y=None,x=0,length=None):
   y=self.screenPos if y==None else y
@@ -315,7 +311,7 @@ class gui(forms):
     return a[0][:2]
 
  def previousNonIgnoredElement(self,nodes,idx):
-  while idx>0 and self.ignoreElements.intersection(self.js.repl.parentNodeNames(nodes[idx])):
+  while idx>0 and self.ignoreElements.intersection(self.parentNodeNames(nodes[idx])):
    idx-=1
   return nodes[idx]
 
@@ -339,21 +335,22 @@ class gui(forms):
   ii=-1
   for o in res:
    ii+=1
-   end,i,nn,v,t=o[0],o[1],o[2],o[3],o[4]
+   end,i,nn,v,t,pn=o[0],o[1],o[2],o[3],o[4],o[5]
    if i in self.js.map:
     if end==1:
      lc.append((0,self.js.map[i]))
     else:
      lc.append(self.js.map[i])
     continue
-   log("end:",end)
+#   log("end:",end)
    a={}
-   for n in xrange(5,len(o),2):
+   for n in xrange(6,len(o),2):
     a[o[n]]=o[n+1]
    if end==0:
-    jc=mozCom.JSClass(root=self.js,name=str(ii),id=i,vars={"tagName":nn,"nodeName":nn,"nodeValue":v,"nodeType":t})
-    j.map[i]=jc
-    j.rMap[(i,ii)]=jc
+    jc=mozCom.JSClass(root=self.js,name=str(ii),id=i,vars={"tagName":nn,"nodeName":nn,"nodeValue":v,"nodeType":t,"parentNode":self.js.map[pn],"_flags_skip":0})
+#    log("vars2:",repr(jc),jc.vars)
+    self.js.map[i]=jc
+    self.js.rMap[(i,ii)]=jc
    else:
     jc=(0,self.js.map[i])
    lc.append(jc)
@@ -363,6 +360,14 @@ class gui(forms):
   self.nidx=-1
   w=self.maxx
   self.y,self.x=0,0
+#  log("nodes from doc:"+str(self.dom.document))
+  self.dom.document.vars['_flags_skip']=0
+  for k in "nodeName,tagName,nodeValue".split(","):
+   try:
+    self.dom.document.vars[k]=self.dom.document[k]
+   except:
+    self.dom.document.vars[k]=None
+  self.dom.document.vars['parentNode']=None
   try:
    nodes=self.iterNodes(self.dom.document,1)
    self.nodes_closing=nodes
@@ -389,7 +394,7 @@ class gui(forms):
 #   log("node::"+repr(n))
 #   log("nodeName::"+str(n.nodeName))
    self.nidx+=1
-   self.setStatus("id:%d" % (nid,))
+#   self.setStatus("id:%d" % (nid,))
 #we're at the end of an element
    if type(n)==tuple:
     n,t=n[1],n[1].nodeName if n[1].nodeName else None
@@ -422,9 +427,10 @@ self.textOnSameLine(nodes):
    if n.nodeName in self.ignoreElements:
     tnid=self.getNextNonChildNode(n,nodes)
     if tnid!=None:
+     log("found new elem:",tnid,"currently",nid)
      nid=tnid-1
      continue
-    if self.ignoreElements.intersection(self.js.repl.parentNodeNames(n)): continue
+#   log("text:",n)
    text=self.getElementText(n)
 #   log("getElementText:",i,text)
    if text==None: text=''
@@ -649,15 +655,17 @@ similar in concept to a tab in Firefox
 """
  def exit(self,*a,**kw):
   try:
+   curses.echo(1)
    self.screen.keypad(0)
    self.screen.nodelay(0)
-  except:
-   pass
+   curses.nocbreak()
+  except Exception,e:
+   log("exit:err",e)
   sys.exit()
 
  quit=exit
 
- def __init__(self,jsQ=None,jsRoot=None,start_url=""):
+ def __init__(self,screen,jsQ=None,jsRoot=None,start_url=""):
   """initialize the main window
 jsQ points to the queue where JS generated events are sent
 jsRoot points to the root class of js
@@ -665,18 +673,24 @@ jsRoot points to the root class of js
   log("thread:init:activeWindow")
   self.daemon=1
   self.start_url=start_url
-  self.local_vars="screenNum,screenPos,screenPosX,url".split(",")
+  self.events=[]
+  self.local_vars="numLines,_display,nodes,screenNum,screenPos,screenPosX,url".split(",")
   self.jsQ=jsQ
   self.js=jsRoot
   self.keys=config.mainWindowKeys
   self.windows=[]
+  self.windowVars={}
   self.windex=-1
-  self.screen = curses.initscr()
+  self.screen = screen
   curses.def_shell_mode()
   self.screen.nodelay(1)
   self.screen.keypad(1)
   curses.raw(1)
   curses.noecho()
+  self.initVars()
+  self.run()
+
+ def initVars(self):
   self.maxy,self.maxx=self.screen.getmaxyx()
   self.curPos=[0,0]
   self.status=self.maxy-1
@@ -718,13 +732,18 @@ jsRoot points to the root class of js
      self.updateStatus("No previous %s" % s)
 
  def load(self,e):
+  self.page.linkedBrowser.jsrefresh()
   if e.target.location.href=="about:blank":
    return
+  log("page.linkedBrowser.contentDocument",self.page.linkedBrowser.contentDocument,"e.target",e.target)
   if e.target.defaultView==e.target.defaultView.top and self.page.linkedBrowser.contentDocument==e.target:
+   self.events.append(e)
    self.dom=e.target.defaultView
+   self.dom.jsrefresh()
+   log("setting dom to %s" % (str(self.dom),))
    self.setStatus("page %s loaded" % (self.dom.location.href,))
    self.pageRefreshData()
-   del self.page.linkedBrowser.contentDocument
+
 
  def onStatusChange(self,e):
   self.setStatus(e.aMessage)
@@ -861,7 +880,7 @@ used, e.g. when reading a webpage as a whole document.
    self.updateStatus("")
 
  def isInElement(self,e,n=None):
-  if e in self.js.repl.parentNodeNames(self.getFocusedElement()): return 1
+  if e in self.parentNodeNames(self.getFocusedElement()): return 1
 
  def findNextText(self,mx=-1):
   return self.findElement("#text",direction="forward")
@@ -1037,10 +1056,10 @@ length: the maximum length for this text entry (element.attr=maxlength is the co
   d=self.getFocusedElement()
   if d==None:
    return None
-  log("onFocus:d="+str(d)+",parentNodeNames="+str(self.js.repl.parentNodeNames(d)))
+  log("onFocus:d="+str(d)+",parentNodeNames="+str(self.parentNodeNames(d)))
   if d.nodeName=="A":
    p=d
-  elif not self.isOnLayoutElement(d) and "A" in self.js.repl.parentNodeNames(d):
+  elif not self.isOnLayoutElement(d) and "A" in self.parentNodeNames(d):
    p=d.parentNode
    while p.nodeName!="A": p=p.parentNode
   else:
@@ -1061,13 +1080,13 @@ length: the maximum length for this text entry (element.attr=maxlength is the co
   d=self.getFocusedElement()
   log("execute:focus:",str(d),repr(d))
   d.click()
-  if "A" in self.js.repl.parentNodeNames(d):
+  if "A" in self.parentNodeNames(d):
    log("execute:linkFound:",d)
    d=d.parentNodes(name="A",count=1,includeSelf=1)
   if (d.nodeName=="INPUT" and d.hasAttribute("type") and d.getAttribute("type") in ("submit","image")) or (d.nodeName=="BUTTON"):
    if d.form.evt_submit():
     return d.form.submit(d)
-  if self.formElements.intersection(self.js.repl.parentNodeNames(d)):
+  if self.formElements.intersection(self.parentNodeNames(d)):
    try:
     return self.handleFormInput(d)
    except Exception,e:
@@ -1090,26 +1109,19 @@ length: the maximum length for this text entry (element.attr=maxlength is the co
    return
 
  def handleFormInput(self,element):
-#  self.dom.window._lck.enter()
-#  self.dom.window._jsctx.enter()
   log("handleFormInput",element)
   e=element
-#  self.setStatus("getting baseform")
   baseForm=e.parentNodes(name="form",count=1)
 #  self.setStatus("hfi:got base form")
   if e.nodeName not in self.formElements:
-   e=e.parentNodes(name=self.formElements,count=1)
+   e=self.parentNodes(e,name=self.formElements,count=1)
   if e.nodeName=="OPTION":
 #   self.setStatus("HFI:option found")
-   if "select" in e.parentNodesL:
-    e=e.parentNodes(name="select",count=1)
-#    self.setStatus("hfi:got select from option")
-   else:
-    self.setStatus("formError:no select parent found for this option element")
-    return -1
+   e=self.parentNodes(e,name="select",count=1)
   if e.nodeName=="SELECT":
 #   self.setStatus("HFI:select")
-   opts=e.getElementsByTagName("option")
+   opts=e.options
+#getElementsByTagName("option")
    opts=[(i,i.textContent.strip()) for i in opts]
    self.setStatus("gListbox,running")
    ret=self.gListbox(title=e.name,values=opts,default=0)
@@ -1143,23 +1155,12 @@ length: the maximum length for this text entry (element.attr=maxlength is the co
   else:
    ret=self.gEditbox(default=e.value,type=e.type)
    e.value=ret
-   #self.setStatus("hfi:none of these. returning.")
   self.paintScreen()
   self.showScreen()
-#  self.dom.window._jsctx.leave()
-#  self.dom.window._lck.leave()
-
- def makeLink(self,part):
-  if "://" in part:
-   return part
-  elif part.startswith("/"):
-   return "://".join(urlparse.urlparse(self.url)[:2])+part
-  else:
-   return (self.url+part).replace("//","/")
 
  def onPositionChange(self):
   self.onFocus()
-  log(str(("screenNum",self.screenNum,"screenPos",self.screenPos,"screenPosX",self.screenPosX)))
+#  log(str(("screenNum",self.screenNum,"screenPos",self.screenPos,"screenPosX",self.screenPosX)))
 
  def nextLine(self,*args):
   self._nextLine()
@@ -1327,14 +1328,15 @@ length: the maximum length for this text entry (element.attr=maxlength is the co
   self.setStatus(*args,**kw)
 
  def setStatus(self,txt,*l):
-  if type(txt)==list: txt=",".join([str(i).strip() for i in txt])
-  txt+=" "+" ".join(l)
-  txt.strip()
-  log("status:",txt.encode('utf-8'))
+  if isinstance(txt,list): txt=",".join([str(i).strip() for i in txt])
+  if l: txt+=" "+" ".join(l)
+  if not isinstance(txt,str): txt=str(txt)
+  txt=txt.encode('utf-8')
+  log("status:",txt)
   cur=self.screen.getyx()
   self.screen.move(self.status,0)
   self.screen.clrtoeol()
-  s=str(txt[:self.maxx-1]).encode('utf-8')
+  s=txt[:self.maxx-1]
 #  log("statusInfo:",self.status,"sText",s,"pos",cur)
   try:
    self.screen.addstr(self.status,0,s)
@@ -1345,45 +1347,58 @@ length: the maximum length for this text entry (element.attr=maxlength is the co
   self.screen.refresh()
 
  def saveWindow(self):
-  self.page.screenFN=os.tempnam(None,"pywb.scrn.")
-  fh=open(self.page.screenFN,"wb")
-  self.screen.putwin(fh)
-  fh.close()
-  [setattr(self.page,v,getattr(self,v)) for v in self.local_vars if hasattr(self,v)]
+  if hasattr(self,"page"):
+   p=self.page
+   self.windowVars[p]={}
+   d=self.windowVars[p]
+   [d.__setitem__(i,getattr(self,i,None)) for i in self.local_vars]
 
- def restoreWindow(self,wn=0):
-  self.page=self.windows[wn]
-  [setattr(self,v,getattr(self.page,v)) for v in self.local_vars if hasattr(self.page,v)]
-  if hasattr(self.page,"screenFn"):
-   fh=open(self.page.screenFN,"rb")
-   self.screen=curses.getwin(fh)
-   fh.close()
-   os.remove(self.page.screenFN)
-  elif hasattr(self.page,"dom"):
-    self.paintScreen(); self.showScreen(force=1)
+ def restoreWindow(self,w=None):
+  self.page=w
+  self.page.jsrefresh()
+  self.page.linkedBrowser.jsrefresh()
+  self.dom=self.page.linkedBrowser.contentDocument.defaultView
+  self.dom.jsrefresh()
+  try:
+   d=self.dom.document
+  except:
+   self.setStatus("No document object to display")
+   return
+  if w in self.windowVars:
+   [setattr(self,k,v) for k,v in self.windowVars[w].items() if k in self.local_vars]
+   if not (self._display and self.nodes):
+    a=time.time()
+    self.paintScreen()
+    b=time.time()
+    log("painted, time %s" % (str(b-a),))
+   self.showScreen(force=1)
   else:
-   self.screen.clear()
-   self.screen.addstr(0,0,"empty window")
-  self.screen.refresh()
+   self.initVars()
+   a=time.time()
+   self.paintScreen()
+   b=time.time()
+   log("painted, time %s" % (str(b-a),))
+   self.showScreen(force=1)
 
  def execCode(self):
   p=self.prompt("code:")
   try:
    if ":"==p[0]:
-    a=self.dom.eval(p[1:])
+    a=self.js.eval(p[1:])
    else:
-    a=eval(p)
+    if "=" in p and not [i for i in p.split("=",1)[0] if i not in string.digits+string.letters+"_."]:
+     exec p
+     a=eval("str("+p.split("=",1)[0].strip()+")")
+    else:
+     a=eval(p)
    self.setStatus(str(a).split("\n",1)[0])
   except Exception,e:
    self.setStatus("Exc:"+str(e))
 
  def newWindow(self,url="about:blank"):
-#~~
   p=self.js.gBrowser.addTab(url)
-  p.screenNum,p.screenPosX,p.screenPos=0,0,0
   p.url=url
-  self.windows.append(p)
-  self.nextWindow()
+  self.moveWindow(id=self.js.Array.indexOf(self.js.gBrowser.tabs,p))
 
  def nextWindow(self):
   self.moveWindow(1)
@@ -1391,24 +1406,24 @@ length: the maximum length for this text entry (element.attr=maxlength is the co
  def prevWindow(self):
   self.moveWindow(0)
 
- def moveWindow(self,direction=1):
-  if len(self.windows)<2 and self.windex!=-1:
-   self.setStatus("Only one window open. Unable to switch %s." % ("forward" if direction==1 else "backward",))
+ def moveWindow(self,direction=1,id=None):
+#~~
+  self.saveWindow()
+  if id and 0<=id<self.js.gBrowser.tabs.length:
+   self.page=self.js.gBrowser.tabs[id]
+   self.windex=id
+   self.restoreWindow(self.page)
    return
-  if self.windex!=-1:
-   self.saveWindow()
   if direction==1:
-   if self.windex==len(self.windows)-1:
+   if self.windex>=self.js.gBrowser.tabs.length-1:
     self.windex=-1
    self.windex+=1
   else:
-   if self.windex==0:
-    self.windex=len(self.windows)
+   if self.windex<=0:
+    self.windex=self.js.gBrowser.tabs.length
    self.windex-=1
-  self.page=self.windows[self.windex]
-  self.restoreWindow(self.windex)
-  if hasattr(self.page,"dom"): self.dom=self.page.dom
-  self.setStatus("window: %d" % (self.windex,))
+  self.page=self.js.gBrowser.tabs[self.windex]
+  self.restoreWindow(self.page)
 
  def handleLocalKey(self,k,*args):
   if k in self.keys:
@@ -1425,6 +1440,7 @@ length: the maximum length for this text entry (element.attr=maxlength is the co
     self.setStatus("KeyboardError:%s" % (e,))
 
  def handleEvent(self,ev):
+#  self.events.append(ev)
   log("mainWindow:event:",str(ev))
   try:
    m=getattr(self,ev['t'])
@@ -1507,18 +1523,4 @@ if __name__=='__main__':
 # main()
  quitFlag=0
  j,q=mozCom.initCliFox()
- a=ActiveWindow(jsQ=q,jsRoot=j,start_url=[i for i in sys.argv if ":" in i][0] if [i for i in sys.argv if ":" in i] else None)
- a.run()
- while 1:
-  time.sleep(1)
-  if quitFlag==1:
-   log(threading.enumerate())
-   log("::quitting::")
-   sys.stdout=sys.__stdout__
-   sys.stderr=sys.__stderr__
-   curses.reset_shell_mode()
-   curses.echo()
-   curses.raw(0)
-   curses.endwin()
-   os.system("reset")
-   sys.exit()
+ curses.wrapper(ActiveWindow,jsQ=q,jsRoot=j,start_url=[i for i in sys.argv if ":" in i][0] if [i for i in sys.argv if ":" in i] else None)
