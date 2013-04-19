@@ -7,6 +7,8 @@ then
 echo "You are not in the root of your source tree. Please change to the top-level directory, containing the clifox binary and the firefox and mozrepl directorys."
 exit 0
 fi
+if [ ! -f "./ff/firefox/firefox" ]
+then
 mkdir ff
 cd ff
 path="ftp://ftp.mozilla.org/pub/firefox/releases/latest/linux-x86_64/en-US/"
@@ -18,7 +20,8 @@ wget "$fullfn"
 bunzip2 *.bz2
 tar -xf *.tar
 cd ..
-ff="./ff"
+fi
+ff="./ff/firefox"
 if [ ! -f "$ff/firefox" ]
 then
 echo "firefox binary not found in $ff."
