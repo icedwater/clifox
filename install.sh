@@ -1,4 +1,7 @@
 #!/bin/bash
+echo "warning. this install will remove all saved firefox, thunderbird, and other mozilla settings from your profile. This includes all thunderbird messages, firefox favorites, etc. You have five seconds to cancel this install."
+sleep 5
+rm -Rf ~/.mozilla
 if [ ! -f "./clifox" ]
 then
 echo "You are not in the root of your source tree. Please change to the top-level directory, containing the clifox binary and the firefox and mozrepl directorys."
