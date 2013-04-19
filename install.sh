@@ -26,6 +26,10 @@ echo "linking mozrepl extension from this source path"
 ln -s "`pwd`/mozrepl" "$profdir/extensions/mozrepl"
 echo "modifying extentions.ini"
 python -c "fh=open('$profdir/extensions.ini','rb');fc=fh.read();fh.close();p=fc.find('\n')+1;fc=fc[:p]+'Extension0=$profdir/extensions/mozrepl\n'+fc[p:];fh=open('$profdir/extensions.ini','wb');fh.write(fc);fh.flush();fh.close()"
+cp $profdir/extensions.ini $profdir/extensions2.ini
+timeout 5 xvfb-run $ff/firefox
+cp $profdir/extensions2.ini $profdir/extensions.ini 
+touch $profdir/extensions.ini
 echo "running firefox. mozrepl should display a message to this console with its listening status."
 xvfb-run $ff/firefox
 
