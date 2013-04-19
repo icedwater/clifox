@@ -1,24 +1,26 @@
 import os,sys,select,socket,time,Queue,chardet
-import simplejson as json
-dbg=1
+try:
+ import json
+except:
+ import simplejson as json
+dbg=2
 dbgl=[]
+from utils import log
 true=True
 false=False
 null=None
 
-rootVars="dlog,data,eventQ,sock,send,recv,map,rMap".split(",")
-localVars="vars,eventQ,eval,rMap,checkIds,id,name,value,type,root,parent,map,sock,data,send,recv".split(",")
+rootVars="ldata,dlog,data,eventQ,sock,send,recv,map,rMap".split(",")
+localVars="jsrefresh,vars,eventQ,eval,rMap,checkIds,id,name,value,type,root,parent,map,sock,data,send,recv".split(",")
 localVars=[i for i in localVars if i not in rootVars]
 
 class JSClass(object):
  root=None
  id=None
- vars={}
  def __init__(self,name="",value="",id="",root=0,parent=None,type="object",q=None,vars={},hostname="localhost"):
-  self.vars={}
-  [self.vars.__setitem__(k,v) for k,v in vars.items()]
   self.root=root if root!=0 else self
   if self.root==self:
+   self.ldata={}
    self.dlog=[]
    self.map={}
    self.rMap={}
@@ -26,6 +28,10 @@ class JSClass(object):
    self.sock.connect((hostname,4242))
    self.data=""
    self.eventQ=q
+#all classes
+  if id not in self.ldata: self.ldata[id]={}
+  self.vars=self.ldata[id]
+  if vars: [self.vars.__setitem__(k,v) for k,v in vars.items()]
   self.name=name
   self.id=id
   self.parent=parent
@@ -33,46 +39,44 @@ class JSClass(object):
   self.value=value
 
  def recv(self,delay=None):
-  if self.root!=self:
-   return self.root.recv()
-  else:
-   while 1:
-    if "\n" in self.data:
-     ret,self.data=self.data.split("\n",1)
-     self.dlog.append(ret)
-     if dbg>=1: dbgl.append("in:"+str(ret))
-     if dbg>1: print dbgl[-1]
+  while 1:
+   if "\n" in self.data:
+    ret,self.data=self.data.split("\n",1)
+    self.dlog.append(ret)
+    if dbg>=1: dbgl.append("in:"+str(ret))
+    if dbg>1: log(dbgl[-1])
 #error in deserialization?
-     etime1=time.time()
-     encodings="latin-1,utf-8".split(",")
-     for enc in encodings:
-      try:
-       ret=eval(unicode(ret,enc))
-       break
-      except UnicodeEncodeError:
-       continue
-     if dbg>1: print "jsonTime:",time.time()-etime1
-#back from a request we generated? just return this data to the caller, e.g. __getattr__, who will process it.
-     if ret['m']=="b":
-      return ret
-#an error was thrown on the javascript side. throw it here as well as a general Exception type.
-     if ret['m']=="t":
-      raise Exception("js/"+ret['a'][0])
-#an event popped up, stick it in the q.
-     if ret['m'] in ("w","e","E"):
-      if ret['m'] in ("e","E"):
-       x=JSClass(name=ret['t'],id=ret['a'][0],parent=None,root=self.root)
-       self.root.map[x.id]=x
-       ret['a'][0]=x
-      self.eventQ.put(ret)
+    etime1=time.time()
+    encodings="latin-1,utf-8".split(",")
+    for enc in encodings:
+     try:
+      ret=eval(unicode(ret,enc))
+      break
+     except UnicodeEncodeError:
       continue
+    if dbg>1: log("jsonTime:",time.time()-etime1)
+#back from a request we generated? just return this data to the caller, e.g. __getattr__, who will process it.
+    if ret['m']=="b":
+     return ret
+#an error was thrown on the javascript side. throw it here as well as a general Exception type.
+    if ret['m']=="t":
+     log("event:"+repr(ret))
+     raise Exception("js/"+ret['a'][0])
+#an event popped up, stick it in the q.
+    if ret['m'] in ("w","e","E"):
+     if ret['m'] in ("e","E"):
+      x=JSClass(name=ret['t'],id=ret['a'][0],parent=None,root=self.root)
+      self.root.map[x.id]=x
+      ret['a'][0]=x
+     self.eventQ.put(ret)
+     continue
 #set,get,remove,eXecute,call
-     else:
-      getattr(self,"js_"+ret['m'])(ret)
+    else:
+     getattr(self,"js_"+ret['m'])(ret)
 #     print "error:",str(ret)
-    s=select.select([self.sock],[],[],delay)
-    if delay and not s[0]: return
-    self.data+=self.sock.recv(16384)
+   s=select.select([self.sock],[],[],delay)
+   if delay and not s[0]: return
+   self.data+=self.sock.recv(16384)
 
  def send(self,data):
   if type(data)!=str:
@@ -80,7 +84,7 @@ class JSClass(object):
   if data[-1]!="\n":
    data+="\n"
   if dbg>=1: dbgl.append("out:"+str(data))
-  if dbg>1: print dbgl[-1]
+  if dbg>1: log(dbgl[-1])
   self.sock.send(data)
 
  def xjs_s(self,o):
@@ -120,6 +124,15 @@ class JSClass(object):
   [p.parent.__getattr__(p.name) for p in ps]
   return len(ps)
 
+ def jsrefresh(self):
+  c=self
+  if c.id in self.map: del self.map[c.id]
+  k=(c.parent.id,c.name)
+  if k in self.rMap:
+   self.rMap.pop(k)
+   l=[(id,name) for id,name in self.rMap if id==c.id]
+   [self.rMap.pop(i) for i in l]
+
  def __iter__(self):
   return JSIterator(self)
 
@@ -130,9 +143,12 @@ class JSClass(object):
   return self.id.__hash__()
 
  def __cmp__(self,other):
-  oi=getattr(other,"id",None)
-  if oi==self.id: return 0
-  return -1 if oi<self.id else 1
+  if type(other)==type(self):
+   oi=other.id
+   si=self.id
+   if oi==si: return 0
+   return -1 if oi<si else 1
+  return -1
 
  def __getitem__(self,x):
   return self.__getattr__(x)
@@ -152,13 +168,14 @@ class JSClass(object):
  def __getattr__(self,x):
   if x in rootVars and object.__getattribute__(self,"root")!=self:
    return object.__getattribute__(object.__getattribute__(self,"root"),x)
-  elif x in object.__getattribute__(self,"vars"):
-   return object.__getattribute__(self,"vars")[x]
+  elif x in self.vars:
+#   log("ldata",x)
+   return self.vars[x]
   elif x in localVars:
    return object.__getattribute__(self,x)
   else:
    pass #if self.root!=self: object.__getattribute__(self,"checkIds")()
-  if self.root!=self and self.id not in self.root.map:
+  if self.root!=self and self.id not in self.map:
    return self.parent[self.name][x]
   if (self.id,x) in self.root.rMap:
    return self.root.rMap[(self.id,x)]
@@ -169,10 +186,11 @@ class JSClass(object):
   if a.type=="undefined":
    raise AttributeError("%s has no attribute %s" % (self.name,str(a.name),))
   if a.type in ["array","object","function"]:
-   self.root.map[a.id]=a
+   self.map[a.id]=a
 #might should change from self.id to a.parent.id (points to self.id)
-   self.root.rMap[(self.id,a.name)]=a
+   self.rMap[(self.id,a.name)]=a
    return a
+  a.id=-1
   return a.value
 
  def __setattr__(self,x,y):
@@ -180,8 +198,8 @@ class JSClass(object):
    return object.__setattr__(object.__getattribute__(self,"root"),x,y)
   elif x in rootVars:
    return object.__setattr__(self,x,y)
-  elif x in object.__getattribute__(self,"vars"):
-   object.__getattribute__(self,"vars")[x]=y
+  elif x not in localVars and x in self.ldata.get(self.id,[]):
+   return self.ldata[self.id][x]
   elif x in localVars:
    return object.__setattr__(self,x,y)
   else:
@@ -201,6 +219,7 @@ class JSClass(object):
    self.root.map[a.id]=a
    self.root.rMap[(a.parent.id,a.name)]=a
    return a
+  a.id=-1
   return a.value
 
  def __call__(self,*a,**kw):
@@ -222,6 +241,7 @@ class JSClass(object):
    self.root.map[a.id]=a
    self.root.rMap[(a.parent.id,a.name)]=a
    return a
+  a.id=-1
   return a.value
 
 class JSIterator(object):
@@ -295,7 +315,7 @@ continue;
 while (n && !n.nextSibling)
 {
 n=n.parentNode;
-if (endings){
+if (endings && n){
 l.push([0,n]);
 }
 }
@@ -435,6 +455,7 @@ a.push(addToMap(n));
 a.push(n.nodeName);
 a.push(n.nodeValue);
 a.push(n.nodeType);
+a.push(repl.inMap(n.parentNode));
 at=n.attributes;
 if(at)
 {
