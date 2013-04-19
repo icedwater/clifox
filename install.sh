@@ -1,15 +1,24 @@
 #!/bin/bash
-echo "warning. this install will remove all saved firefox, thunderbird, and other mozilla settings from your profile. This includes all thunderbird messages, firefox favorites, etc. You have five seconds to cancel this install."
-sleep 5
+echo "warning. this install will remove all saved firefox, thunderbird, and other mozilla settings from your profile. This includes all thunderbird messages, firefox favorites, etc. You have ten seconds to cancel this install."
+sleep 10
 rm -Rf ~/.mozilla
 if [ ! -f "./clifox" ]
 then
 echo "You are not in the root of your source tree. Please change to the top-level directory, containing the clifox binary and the firefox and mozrepl directorys."
 exit 0
 fi
-echo "enter directory holding your firefox binarys. This directory should contain firefox and firefox-bin."
-echo -n "FFBin:"
-read ff
+mkdir ff
+cd ff
+path="ftp://ftp.mozilla.org/pub/firefox/releases/latest/linux-x86_64/en-US/"
+wget --no-remove-listing "$path"
+fn=`cat ./.listing | tr '\r' '\n' | rev | cut -d ' ' -f 1 | rev | grep -i bz2`
+fullfn="$path$fn"
+rm ./*
+wget "$fullfn"
+bunzip2 *.bz2
+tar -xf *.tar
+cd ..
+ff="./ff"
 if [ ! -f "$ff/firefox" ]
 then
 echo "firefox binary not found in $ff."
