@@ -10,16 +10,139 @@ true=True
 false=False
 null=None
 
-rootVars="ldata,dlog,data,eventQ,sock,send,recv,map,rMap".split(",")
-localVars="jsrefresh,vars,eventQ,eval,rMap,checkIds,id,name,value,type,root,parent,map,sock,data,send,recv".split(",")
-localVars=[i for i in localVars if i not in rootVars]
-
 class JSClass(object):
- root=None
- id=None
  def __init__(self,name="",value="",id="",root=0,parent=None,type="object",q=None,vars={},hostname="localhost"):
-  self.root=root if root!=0 else self
-  if self.root==self:
+  self.ref=JSReference(name=name,value=value,id=id,root=root,parent=parent,type=type,q=q,vars=vars,hostname=hostname,proxy=self)
+#getattr/setattr
+#if x is ref, then do object.__method__(self,x)
+
+ def __iter__(self):
+  return JSIterator(self)
+
+ def __len__(self):
+  return self.length
+
+ def __hash__(self):
+  return self.ref.id.__hash__()
+
+ def __cmp__(self,other):
+  to=type(other)
+  if to==JSReference:
+   other=getattr(other,"proxy",None)
+   to=type(other)
+  if type(other)==JSClass:
+   oi=other.ref.id
+   si=self.ref.id
+   if oi==si: return 0
+   return -1 if oi<si else 1
+  return -1
+
+ def __getitem__(self,x):
+  return self.__getattr__(x)
+
+ def __setitem__(self,x,y):
+  return self.__setattr(x,y)
+
+ def __repr__(self):
+  r=self.ref
+  return "js.%s@%s/%s" % (r.name,r.type,r.id,)
+
+ def __dir__(self):
+  r=self.ref
+  d={"m":"d","a":[r.id],"i":r.id}
+  rr=r.root.ref
+  rr.send(d)
+  ret=rr.recv()
+  return ret['a'][0]
+
+ def __getattr__(self,x):
+  if x=="ref":
+   return object.__getattribute__(self,"ref")
+  r=self.ref
+  if x in r.vars:
+   return r.vars[x]
+#  print x
+  if r.root!=self and r.id not in r.map:
+   return r.parent[r.name][x]
+  if (r.id,x) in r.rMap:
+   return r.rMap[(r.id,x)]
+  d={"m":"g","a":[x],"i":r.id}
+  rr=r.root.ref
+  rr.send(d)
+  ret=rr.recv()
+  if ret['t'] not in ("undefined","array","object","function"):
+   return ret['a'][0]
+  a=JSClass(name=x,root=r.root,parent=self,id=ret['i'],type=ret['t'],value=ret['a'][0])
+  ar=a.ref
+  if ar.type=="undefined":
+   raise AttributeError("%s has no attribute %s" % (self.ref.name,str(ar.name),))
+  if ar.type in ["array","object","function"]:
+   r.map[ar.id]=a
+   r.rMap[(r.id,ar.name)]=a
+   return a
+
+ def __setattr__(self,x,y):
+  if x=="ref":
+   return object.__setattr__(self,"ref",y)
+  r=self.ref
+  if x in r.vars:
+   return r.vars[x]
+  name=x if type(x)!=JSClass else x.ref.name
+  y=[y] if type(y)!=list else y
+  ids=[i.ref.id for i in y if type(i)==JSClass]
+  a=[[i.ref.id,''] if type(i)==JSClass else i for i in y]
+  a.insert(0,name)
+  d={"m":"s","a":a,"i":r.id}
+  r.root.ref.send(d)
+  ret=r.root.ref.recv()
+#~~
+  if ret['t'] not in ("undefined","array","object","function"):
+   return ret['a'][0]
+  a=JSClass(name=x,root=r.root,parent=self,id=ret['i'],type=ret['t'],value=ret['a'][0])
+  ar=a.ref
+  if ar.type=="undefined":
+   raise AttributeError("%s has no attribute %s" % (self.ref.name,str(r.name),))
+  if ar.type in ["array","object","function"]:
+   r.map[ar.id]=a
+   r.rMap[(r.id,ar.name)]=a
+   return a
+
+ def __call__(self,*a,**kw):
+  r=self.ref
+  if r.root!=self and r.id not in r.root.ref.map:
+   return r.parent[r.name](*a,**kw)
+  ids=[i.ref.id for i in a if type(i)==JSClass]
+  a=[[i.ref.id,''] if type(i)==JSClass else i for i in a]
+  d={"m":"c","a":[r.name,a],"i":r.parent.ref.id,"ids":ids}
+  r.root.ref.send(d)
+  ret=r.root.ref.recv()
+#~~
+  if ret['a'][0]==None:
+   return None
+  if ret['t'] not in ("undefined","array","object","function"):
+   return ret['a'][0]
+  a=JSClass(name=r.name+".result",root=r.root,parent=self,id=ret['i'],type=ret['t'],value=ret['a'][0])
+  ar=a.ref
+  if ar.type=="undefined":
+   return None
+#raise AttributeError("%s has no attribute %s" % (self.name,str(a.name),))
+  if ar.type in ["array","object","function"]:
+   r.map[ar.id]=a
+   r.rMap[(r.id,ar.name)]=a
+   return a
+
+class JSReference(object):
+ def __init__(self,name="",value="",id="",root=0,parent=None,type="object",q=None,vars={},hostname="localhost",proxy=None):
+  self.id=id
+  self.proxy=proxy
+  self.root=self.proxy if root==0 else root
+# if root!=0 else self
+  self.name=name
+  self.value=value
+  self.type=type
+  self.parent=parent
+  if root==0:
+#self.proxy:
    self.ldata={}
    self.dlog=[]
    self.map={}
@@ -28,15 +151,16 @@ class JSClass(object):
    self.sock.connect((hostname,4242))
    self.data=""
    self.eventQ=q
+  else:
+   rr=self.root.ref
+   self.rMap=rr.rMap
+   self.map=rr.map
+   self.ldata=rr.ldata
 #all classes
   if id not in self.ldata: self.ldata[id]={}
   self.vars=self.ldata[id]
-  if vars: [self.vars.__setitem__(k,v) for k,v in vars.items()]
-  self.name=name
-  self.id=id
-  self.parent=parent
-  self.type=type
-  self.value=value
+  for k,v in vars.items():
+   self.vars[k]=v
 
  def recv(self,delay=None):
   while 1:
@@ -66,7 +190,7 @@ class JSClass(object):
     if ret['m'] in ("w","e","E"):
      if ret['m'] in ("e","E"):
       x=JSClass(name=ret['t'],id=ret['a'][0],parent=None,root=self.root)
-      self.root.map[x.id]=x
+      self.map[x.ref.id]=x
       ret['a'][0]=x
      self.eventQ.put(ret)
      continue
@@ -87,6 +211,7 @@ class JSClass(object):
   if dbg>1: log(dbgl[-1])
   self.sock.send(data)
 
+#this would be a method from the js side
  def xjs_s(self,o):
   if o['i'] not in self.map:
    p=self.map['jthis']
@@ -101,8 +226,8 @@ class JSClass(object):
   p[name]=m
 
  def eval(self,s):
-  self.root.send({"m":"x","i":self.id,"a":[s]})
-  x=self.root.recv()
+  self.root.ref.send({"m":"x","i":self.id,"a":[s]})
+  x=self.root.ref.recv()
   for i in xrange(len(x['a'])):
    b=x['a'][i]
    if type(b)==list and len(b)==2 and str(b[0])=='j':
@@ -116,133 +241,22 @@ class JSClass(object):
   while p.parent:
    l.append((p,p.id))
    p=p.parent
-  self.root.send({"m":"i","a":[[i[-1] for i in l]]})
-  x=self.root.recv()
+  self.root.ref.send({"m":"i","a":[[i[-1] for i in l]]})
+  x=self.root.ref.recv()
   ids=[i[0] for i in x['a'][0] if i[1]==0]
   ps=[i[0] for i in l if i[1] in ids]
-  [self.root.map.pop(i.id) for i in ps if i.id in self.root.map]
+  [self.root.ref.map.pop(i.id) for i in ps if i.id in self.root.ref.map]
   [p.parent.__getattr__(p.name) for p in ps]
   return len(ps)
 
  def jsrefresh(self):
   c=self
   if c.id in self.map: del self.map[c.id]
-  k=(c.parent.id,c.name)
+  k=(c.parent.ref.id,c.name)
   if k in self.rMap:
    self.rMap.pop(k)
    l=[(id,name) for id,name in self.rMap if id==c.id]
    [self.rMap.pop(i) for i in l]
-
- def __iter__(self):
-  return JSIterator(self)
-
- def __len__(self):
-  return self.length
-
- def __hash__(self):
-  return self.id.__hash__()
-
- def __cmp__(self,other):
-  if type(other)==type(self):
-   oi=other.id
-   si=self.id
-   if oi==si: return 0
-   return -1 if oi<si else 1
-  return -1
-
- def __getitem__(self,x):
-  return self.__getattr__(x)
-
- def __setitem__(self,x,y):
-  return self.__setattr(x,y)
-
- def __repr__(self):
-  return "js.%s@%s/%s" % (self.name,self.type,self.id,)
-
- def __dir__(self):
-  d={"m":"d","a":[self.id],"i":self.id}
-  self.root.send(d)
-  ret=self.root.recv()
-  return ret['a'][0]
-
- def __getattr__(self,x):
-  if x in rootVars and object.__getattribute__(self,"root")!=self:
-   return object.__getattribute__(object.__getattribute__(self,"root"),x)
-  elif x in self.vars:
-#   log("ldata",x)
-   return self.vars[x]
-  elif x in localVars:
-   return object.__getattribute__(self,x)
-  else:
-   pass #if self.root!=self: object.__getattribute__(self,"checkIds")()
-  if self.root!=self and self.id not in self.map:
-   return self.parent[self.name][x]
-  if (self.id,x) in self.root.rMap:
-   return self.root.rMap[(self.id,x)]
-  d={"m":"g","a":[x],"i":self.id}
-  self.root.send(d)
-  ret=self.root.recv()
-  a=JSClass(name=x,root=self.root,parent=self,id=ret['i'],type=ret['t'],value=ret['a'][0])
-  if a.type=="undefined":
-   raise AttributeError("%s has no attribute %s" % (self.name,str(a.name),))
-  if a.type in ["array","object","function"]:
-   self.map[a.id]=a
-#might should change from self.id to a.parent.id (points to self.id)
-   self.rMap[(self.id,a.name)]=a
-   return a
-  a.id=-1
-  return a.value
-
- def __setattr__(self,x,y):
-  if x in rootVars and object.__getattribute__(self,"root")!=self:
-   return object.__setattr__(object.__getattribute__(self,"root"),x,y)
-  elif x in rootVars:
-   return object.__setattr__(self,x,y)
-  elif x not in localVars and x in self.ldata.get(self.id,[]):
-   return self.ldata[self.id][x]
-  elif x in localVars:
-   return object.__setattr__(self,x,y)
-  else:
-   pass #if self.root!=self: object.__getattribute__(self,"checkIds")()
-  if self.root!=self and self.id not in self.root.map:
-   return self.parent[self.name][x]
-  name=x if type(x)!=JSClass else x.name
-  y=[y] if type(y)!=list else y
-  ids=[i.id for i in y if type(i)==JSClass]
-  a=[[i.id,''] if type(i)==JSClass else i for i in y]
-  a.insert(0,name)
-  d={"m":"s","a":a,"i":self.id}
-  self.root.send(d)
-  ret=self.recv()
-  a=JSClass(name=x,root=self.root,parent=self,id=ret['i'],type=ret['t'],value=ret['a'][0])
-  if a.type in ("object","array","function"):
-   self.root.map[a.id]=a
-   self.root.rMap[(a.parent.id,a.name)]=a
-   return a
-  a.id=-1
-  return a.value
-
- def __call__(self,*a,**kw):
-  if self.root!=self and self.id not in self.root.map:
-   return self.parent[self.name](*a,**kw)
-  else:
-   pass #if self.root!=self: object.__getattribute__(self,"checkIds")()
-  ids=[i.id for i in a if type(i)==JSClass]
-  a=[[i.id,''] if type(i)==JSClass else i for i in a]
-  d={"m":"c","a":[self.name,a],"i":self.parent.id,"ids":ids}
-  self.root.send(d)
-  ret=self.root.recv()
-  a=JSClass(name=self.name,root=self.root,parent=self,id=ret['i'],type=ret['t'],value=ret['a'][0])
-  if a.value==None:
-   return None
-  if a.type=="undefined":
-   return None
-  if a.type in ["array","object","function"]:
-   self.root.map[a.id]=a
-   self.root.rMap[(a.parent.id,a.name)]=a
-   return a
-  a.id=-1
-  return a.value
 
 class JSIterator(object):
  def __init__(self,cls):
@@ -275,7 +289,7 @@ def initCliFox(hostname="localhost",q=None,js=None):
  if js==None: js=mzjs
  eventQ=Queue.Queue() if not q else q
  j=JSClass(name="this",value=None,id="jthis",root=0,q=eventQ,hostname=hostname)
- j.eval(js)
+ j.ref.eval(js)
  return j,eventQ
 
 mzjs="""
@@ -452,6 +466,10 @@ var a,at,al,j,i;
 a=[];
 a.push(endNode?1:0);
 a.push(addToMap(n));
+if (endNode)
+{
+return a;
+};
 a.push(n.nodeName);
 a.push(n.nodeValue);
 a.push(n.nodeType);
