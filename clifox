@@ -217,9 +217,9 @@ class gui(forms):
     if n.hasAttribute("type") and n.getAttribute("type").lower()=="password":
      v="*"*len(v)
    elif n.hasAttribute("checked"):
-    v="x" if n.getAttribute("checked")==1 else " "
+    v="x" if n.getAttribute("checked")==1 else "-"
    else:
-    v=""
+    v="nullV"
    if n.hasAttribute("type") and n.getAttribute("type").lower() in ("submit","image"):
     return "[submit] %s" % (v,)
    elif n.hasAttribute("lable"):
@@ -331,28 +331,33 @@ class gui(forms):
  def iterNodes(self,root,endings=0):
   self.js.tmp=root
   lc=[]
-  res=self.js.eval("repl.getDocJson(tmp,%d)" % (int(endings),))[0]
+  res=self.js.ref.eval("repl.getDocJson(tmp,%d)" % (int(endings),))[0]
   ii=-1
+  jm=self.js.ref.map
+  jr=self.js.ref.rMap
   for o in res:
    ii+=1
-   end,i,nn,v,t,pn=o[0],o[1],o[2],o[3],o[4],o[5]
-   if i in self.js.map:
+   end,i=o[:2]
+   log(end,i,o)
+   if i in jm:
     if end==1:
-     lc.append((0,self.js.map[i]))
+     lc.append((0,jm[i]))
     else:
-     lc.append(self.js.map[i])
+     lc.append(jm[i])
     continue
 #   log("end:",end)
    a={}
    for n in xrange(6,len(o),2):
     a[o[n]]=o[n+1]
    if end==0:
-    jc=mozCom.JSClass(root=self.js,name=str(ii),id=i,vars={"tagName":nn,"nodeName":nn,"nodeValue":v,"nodeType":t,"parentNode":self.js.map[pn],"_flags_skip":0})
-#    log("vars2:",repr(jc),jc.vars)
-    self.js.map[i]=jc
-    self.js.rMap[(i,ii)]=jc
+    nn,v,t,pn=o[2:6]
+#    log("pn:",jm.get(pn,"NoKey %s in dict" % (repr(pn),)))
+    jc=mozCom.JSClass(root=self.js,name=str(ii),id=i,vars={"tagName":nn,"nodeName":nn,"nodeValue":v,"nodeType":t,"parentNode":jm.get(pn,pn),"_flags_skip":0})
+#    log("vars2:",repr(jc),jc.ref.vars)
+    jm[i]=jc
+    jr[(i,ii)]=jc
    else:
-    jc=(0,self.js.map[i])
+    jc=(0,jm[i])
    lc.append(jc)
   return lc
 
@@ -361,13 +366,13 @@ class gui(forms):
   w=self.maxx
   self.y,self.x=0,0
 #  log("nodes from doc:"+str(self.dom.document))
-  self.dom.document.vars['_flags_skip']=0
+  self.dom.document.ref.vars['_flags_skip']=0
   for k in "nodeName,tagName,nodeValue".split(","):
    try:
-    self.dom.document.vars[k]=self.dom.document[k]
+    self.dom.document.ref.vars[k]=self.dom.document[k]
    except:
-    self.dom.document.vars[k]=None
-  self.dom.document.vars['parentNode']=None
+    self.dom.document.ref.vars[k]=None
+  self.dom.document.ref.vars['parentNode']=None
   try:
    nodes=self.iterNodes(self.dom.document,1)
    self.nodes_closing=nodes
@@ -733,14 +738,14 @@ jsRoot points to the root class of js
      self.updateStatus("No previous %s" % s)
 
  def load(self,e):
-  self.page.linkedBrowser.jsrefresh()
+  self.page.linkedBrowser.ref.jsrefresh()
   if e.target.location.href=="about:blank":
    return
   log("page.linkedBrowser.contentDocument",self.page.linkedBrowser.contentDocument,"e.target",e.target)
   if e.target.defaultView==e.target.defaultView.top and self.page.linkedBrowser.contentDocument==e.target:
    self.events.append(e)
    self.dom=e.target.defaultView
-   self.dom.jsrefresh()
+   self.dom.ref.jsrefresh()
    log("setting dom to %s" % (str(self.dom),))
    self.setStatus("page %s loaded" % (self.dom.location.href,))
    self.pageRefreshData()
@@ -1040,7 +1045,7 @@ length: the maximum length for this text entry (element.attr=maxlength is the co
    history.append(ret)
   return ret
 
- def prompt(self,prompt=":",y=None, history=None):
+ def prompt(self,prompt=":",y=None, history=None,default=None):
   pos=self.screen.getyx()
   if y==None: y=self.status
   self.screen.move(y,0)
@@ -1048,7 +1053,7 @@ length: the maximum length for this text entry (element.attr=maxlength is the co
   self.screen.addstr(y, 0, prompt)
   self.screen.move(y, len(prompt)+1)
   c=""
-  c=self.rl(history)
+  c=self.rl(history=history,default=default)
   self.setStatus(prompt+c)
   self.screen.move(y,0)
   self.screen.clrtoeol()
@@ -1082,43 +1087,46 @@ length: the maximum length for this text entry (element.attr=maxlength is the co
 
  def execute(self):
   d=self.getFocusedElement()
-  log("execute:focus:",str(d),repr(d))
-  d.click()
+#  log("execute:focus:",str(d),repr(d))
+#  d.click()
   if "A" in self.parentNodeNames(d):
    log("execute:linkFound:",d)
-   d=d.parentNodes(name="A",count=1,includeSelf=1)
+   while d.nodeName!="A":
+    d=d.parentNode
   if (d.nodeName=="INPUT" and d.hasAttribute("type") and d.getAttribute("type") in ("submit","image")) or (d.nodeName=="BUTTON"):
-   if d.form.evt_submit():
-    return d.form.submit(d)
+#   d.click()
+#   if d.form.evt_submit():
+   return d.click()
   if self.formElements.intersection(self.parentNodeNames(d)):
+   while d!=None and d.nodeName in self.formElements:
+    d=d.parentNode
+  if d.nodeName in self.formElements:
    try:
     return self.handleFormInput(d)
    except Exception,e:
     return generate_error_report()
-  if d.nodeName=="A" and len(d.href)>1 and "#" in d.href and d.href.split("#",1)[0] in ('',self.url.split("#",1)[0]):
-#d.href[0]=="#":
+  if d.nodeName=="A" and "#" in d.href and d.href.split("#",1)[0]==d.ownerDocument.location.href.split("#",1)[0]:
    anc=d.href.split("#",1)[-1]
-   log("looking for anchor",anc)
-   x=[i for i in self.dom.document.getElementsByTagName("A") if i.hasAttribute("name") and i.getAttribute("name")==anc]
-   x=x[0] if x else None
-   if not x:
+   if anc:
+    log("looking for anchor",anc)
     x=self.dom.document.getElementById(anc)
-   if x: return self.moveToElem(x)
-  if d.hasAttribute("href"):
-   return
+    if x!=None:
+     return self.moveToElem(x)
   if d.nodeName=="A":
    url=d.href
-   log("execute: "+url,"refering url: "+self.url)
-   self.dom.location.href=url
+   log("execute: "+url)
+   d.click()
+#   self.dom.location.href=url
    return
 
  def handleFormInput(self,element):
   log("handleFormInput",element)
   e=element
-  baseForm=e.parentNodes(name="form",count=1)
+  baseForm=e.form
+#parentNodes(name="form",count=1)
 #  self.setStatus("hfi:got base form")
-  if e.nodeName not in self.formElements:
-   e=self.parentNodes(e,name=self.formElements,count=1)
+  while e!=None and e.nodeName not in self.formElements:
+   e=e.parentNode
   if e.nodeName=="OPTION":
 #   self.setStatus("HFI:option found")
    e=self.parentNodes(e,name="select",count=1)
@@ -1133,7 +1141,8 @@ length: the maximum length for this text entry (element.attr=maxlength is the co
    log("ret:",ret)
    log("form:",e.value)
   elif e.nodeName=="INPUT" and e.type=="text":
-   ret=self.gEditbox(default=e.value)
+   ret=self.prompt(default=e.value)
+#self.gEditbox(default=e.value)
    e.value=ret
   elif e.nodeName=="INPUT" and e.type=="password":
    ret=self.gEditbox(default=e.value,mask="*")
@@ -1359,10 +1368,10 @@ length: the maximum length for this text entry (element.attr=maxlength is the co
 
  def restoreWindow(self,w=None):
   self.page=w
-  self.page.jsrefresh()
-  self.page.linkedBrowser.jsrefresh()
+  self.page.ref.jsrefresh()
+  self.page.linkedBrowser.ref.jsrefresh()
   self.dom=self.page.linkedBrowser.contentDocument.defaultView
-  self.dom.jsrefresh()
+  self.dom.ref.jsrefresh()
   try:
    d=self.dom.document
   except:
@@ -1388,7 +1397,7 @@ length: the maximum length for this text entry (element.attr=maxlength is the co
   p=self.prompt("code:")
   try:
    if ":"==p[0]:
-    a=self.js.eval(p[1:])
+    a=self.js.ref.eval(p[1:])
    else:
     if "=" in p and not [i for i in p.split("=",1)[0] if i not in string.digits+string.letters+"_."]:
      exec p
@@ -1468,10 +1477,13 @@ length: the maximum length for this text entry (element.attr=maxlength is the co
 
  def run(self):
   if not hasattr(self,"page"):
-   self.newWindow(getattr(self,"start_url",config.get("homepage","http://bmcginty.hopto.org/form.html")))
+   if getattr(self,"start_url","")!=None:
+    self.newWindow(getattr(self,"start_url",config.get("homepage","http://bmcginty.hopto.org/form.html")))
+   else:
+    self.moveWindow(id=0)
   while 1:
    time.sleep(0.01)
-   self.js.recv(0.01)
+   self.js.ref.recv(0.01)
    c=self.screen.getch()
    if c!=-1:
     if c in self.keys:
