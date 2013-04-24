@@ -71,7 +71,9 @@ class JSClass(object):
   rr.send(d)
   ret=rr.recv()
   if ret['t'] not in ("undefined","array","object","function"):
+   if r.vars: r.vars['x']=ret['a'][0]
    return ret['a'][0]
+  if ret['a'][0]==None: return None
   a=JSClass(name=x,root=r.root,parent=self,id=ret['i'],type=ret['t'],value=ret['a'][0])
   ar=a.ref
   if ar.type=="undefined":
@@ -167,8 +169,9 @@ class JSReference(object):
    if "\n" in self.data:
     ret,self.data=self.data.split("\n",1)
     self.dlog.append(ret)
-    if dbg>=1: dbgl.append("in:"+str(ret))
+    if dbg>=1: dbgl.append("in:"+ret)
     if dbg>1: log(dbgl[-1])
+    ret=str(ret)
 #error in deserialization?
     etime1=time.time()
     encodings="latin-1,utf-8".split(",")
@@ -506,12 +509,25 @@ if (t[0]===0 && t[1])
 {
 l.push(getNode(t[1],repl.inMap,1));
 } else {
+var z;
 if (t===root)
 {
-l.push(getNode(t,repl.addMap,0));
+z=getNode(t,repl.addMap,0);
 } else {
-l.push(getNode(t,func,0));
+z=getNode(t,func,0);
 }
+zl=z.length;
+if(1==0)
+{
+for (var j=2;j<zl;j++)
+{
+if (typeof(z[j])=='string')
+{
+z[j]=encodeURIComponent(z[j]);
+}
+}
+}
+l.push(z);
 }
 };
 //l.push(repl.time()-atime);

@@ -228,6 +228,12 @@ data=JSON.stringify({"m":"t","a":[e.toString(),"json.stringify.error",f,data.toS
     var string = data == undefined ?
         '\n' :
         data + (appendNewline == false ? '' : '\n');
+try
+{
+string=this.converter.ConvertFromUnicode(string);
+} catch(e) {
+this.onOutput(JSON.stringify({"m":"w","a":[e.toString()]})+"\n");
+}
     this.onOutput(string);
 }
 print.doc =
@@ -570,6 +576,8 @@ var ctx;
 ctx=repl._hostContext;
 repl.events=[];
 repl.killers=[];
+repl.converter=Components.classes["@mozilla.org/intl/scriptableunicodeconverter"].createInstance(Components.interfaces.nsIScriptableUnicodeConverter);
+repl.converter.charset="utf-8";
 repl.mapIdList=Array();
 repl.mapObjList=Array();
 repl.mapObjList.push(ctx);
