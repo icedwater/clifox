@@ -8,7 +8,7 @@ import inspect
 import os,os.path
 path=os.path.realpath(__file__).rsplit(os.sep,1)[0]+"/modules"
 sys.path.append(path)
-import re,time,curses,curses.ascii,sys,Queue,utils,threading,traceback,string,hashlib,shelve,warnings,urlparse,binascii
+import re,time,curses,curses.ascii,sys,Queue,utils,threading,traceback,string,hashlib,shelve,warnings,urlparse,binascii,urllib
 import StringIO as stringio
 import mozCom
 from guiObjects import *
@@ -186,52 +186,59 @@ class gui(forms):
   elif t=="LI":
    return "* "
   elif t=="IMG":
-   if n.hasAttribute("alt"):
-    return "[img] "+n.getAttribute("alt")
-   elif n.hasAttribute("src"):
-    return "[img] "+n.getAttribute("src")
-   elif n.hasChildNodes() and n.nodeValue!="":
-    return "[img] "
+   if n.alt:
+    return "[img] "+n.alt
+   elif n.src:
+    return "[img] "+n.src
+#   elif n.hasChildNodes() and n.nodeValue!="":
+#    return "[img] "
    else:
     return "[img] unknown"
   elif t=="A":
-   x=n.getElementsByTagName("img")
-   if x.length:
+   x=self.getElementsByTagName(n,"img")
+   if x:
     x=x[0]
     x._flags_skip=1
     t=self.getElementText(x)
     if t.startswith("[img] "): t=t[6:]
     t="{["+t+"]}"
     return t
-   elif [i for i in self.nodes if i.parentNode==n] and n.textContent!="":
+   elif [i for i in self.nodes_flat if i.parentNode==n] and n.textContent!="":
     return "{} "
-   elif n.hasAttribute("href"):
-    return "{"+n.getAttribute("href")+"}"
+   elif n.href:
+    return "{%s}" % (n.href,)
    else:
     return "{} "
   elif t in self.formElements:
-   if t=="INPUT" and n.hasAttribute("type") and n.getAttribute("type").lower()=="hidden":
+   if t=="INPUT" and n.type and n.type.lower()=="hidden":
     return None
-   if n.hasAttribute("value"):
-    v=n.getAttribute("value")
-    if n.hasAttribute("type") and n.getAttribute("type").lower()=="password":
+   if n.value:
+    v=n.value
+    if n.type and n.type.lower()=="password":
      v="*"*len(v)
-   elif n.hasAttribute("checked"):
-    v="x" if n.getAttribute("checked")==1 else "-"
+   elif n.checked!=None:
+    v="x" if n.checked else " "
    else:
     v="nullV"
-   if n.hasAttribute("type") and n.getAttribute("type").lower() in ("submit","image"):
+   if n.type and n.type.lower() in ("submit","image"):
     return "[submit] %s" % (v,)
-   elif n.hasAttribute("lable"):
-    return "[%s] %s" % (n.getAttribute("lable"),v,)
-   elif n.hasAttribute("name"):
-    return "[%s] %s" % (n.getAttribute("name"),v,)
+   elif n.lable:
+    return "[%s] %s" % (n.lable,v,)
+   elif n.name:
+    return "[%s] %s" % (n.name,v,)
    else:
     return "[unknown form element] %s" % (str(v),)
   elif t[0]!="#":
    return n.nodeValue
   else:
    return None
+
+ def getElementsByTagName(self,root,tag=""):
+  tag=tag.upper()
+  idx=self.nodes_flat.index(root)
+  end=self.getNextNonChildNode(root,self.nodes_flat)
+  l=self.nodes_flat[idx:end]
+  return [i for i in l if i.tagName==tag]
 
  def parentNodeNames(self,e):
   e=e.parentNode
@@ -316,12 +323,15 @@ class gui(forms):
   return nodes[idx]
 
  def textOnSameLine(self,nodes):
+  return 1 if self.y in self.ys else 0
   x=self.nidx-1
   text=0
   while x>0:
    n=nodes[x]
+#   log("tosl",x,type(n),n.nodeName if type(n)!=tuple else '')
    if type(n)==tuple: x-=1; continue
-   if self.y not in [k[0] for k in self._display[n]]: return text
+   d=self._display[n]
+   if self.y not in [k[0] for k in d]: return text
    if n.nodeValue and str(n.nodeValue).strip(): text=1; return text
    x-=1
   return text
@@ -338,25 +348,29 @@ class gui(forms):
   for o in res:
    ii+=1
    end,i=o[:2]
-   log(end,i,o)
+#   log(end,i)
    if i in jm:
+#    log(id,"in jm,end==",end)
     if end==1:
      lc.append((0,jm[i]))
     else:
      lc.append(jm[i])
     continue
 #   log("end:",end)
-   a={}
-   for n in xrange(6,len(o),2):
-    a[o[n]]=o[n+1]
    if end==0:
+#    o[2:]=[urllib.unquote(j) if type(j)==str else j for j in o[2:]]
+    a={}
+    for n in xrange(6,len(o),2):
+     a[o[n]]=o[n+1]
     nn,v,t,pn=o[2:6]
 #    log("pn:",jm.get(pn,"NoKey %s in dict" % (repr(pn),)))
+#    log(id,"new node")
     jc=mozCom.JSClass(root=self.js,name=str(ii),id=i,vars={"tagName":nn,"nodeName":nn,"nodeValue":v,"nodeType":t,"parentNode":jm.get(pn,pn),"_flags_skip":0})
 #    log("vars2:",repr(jc),jc.ref.vars)
     jm[i]=jc
     jr[(i,ii)]=jc
    else:
+#    log(i,"ending node, attempting dict lookup")
     jc=(0,jm[i])
    lc.append(jc)
   return lc
@@ -375,22 +389,23 @@ class gui(forms):
   self.dom.document.ref.vars['parentNode']=None
   try:
    nodes=self.iterNodes(self.dom.document,1)
-   self.nodes_closing=nodes
-   self.nodes=[i for i in nodes if type(i)!=tuple]
+   self.nodes=nodes
+   self.nodes_flat=[i for i in nodes if type(i)!=tuple]
   except:
    generate_error_report()
   log("got all nodes,",len(nodes),repr([i for i in nodes]))
   last=None
   self.newLineCount=0
   self._display={}
+  self.ys={}
   if dirty!=None:
    nodes=nodes[nodes.index(dirty):]
    self.y,self.x=findNextPositionLocation(nodes)
    last=nodes[0].previousSibling
 #if a node in nodes is an end marker, it will be a tuple. otherwise, it will be a node
 #set all lists for each node in nodes to an empty list, as we are basically clearing all previous positions
-  [self._display.__setitem__(j,[]) for j in nodes if type(j)!=tuple]
-  [setattr(j,"_flags_skip",0) for j in nodes if type(j)!=tuple]
+  [self._display.__setitem__(j,[]) for j in self.nodes_flat]
+#  [setattr(j,"_flags_skip",0) for j in nodes if type(j)!=tuple]
   lenNodes=len(nodes)
   nid=-1
   while nid+1<lenNodes:
@@ -403,6 +418,7 @@ class gui(forms):
 #we're at the end of an element
    if type(n)==tuple:
     n,t=n[1],n[1].nodeName if n[1].nodeName else None
+#    log("end node",t)
     if t in self.newLineElements and t !="A":
 #if we need to separate the end of this element from the next, e.g. this is the end of an h1 element, and we have to put a new line, then do so
      self.y+=1; self.x=0
@@ -410,9 +426,10 @@ class gui(forms):
      while currentI+1<lenNodes and type(nodes[currentI])==tuple:
 #while we're still in the nodes list, and we are encountering end elements, e.g. </h1>></div>, etc
       currentI+=1
-     if type(nodes[currentI])!=tuple:
-#if the element after the one we are currently on is not an end element, then add an index to it's _display property, and exit this loop
-      self._display[nodes[currentI]].append((self.y,self.x,""))
+#~~
+      if type(nodes[currentI])!=tuple:
+#if the element after the one we are currently on is not an end element, then add an index to it's _display property, and exit this loop (while loop will break because of finding this node)
+       self._display[nodes[currentI]].append((self.y,self.x,""))
     continue
 #one-time skip of an element
    if n._flags_skip: n._flags_skip=0; continue
@@ -424,6 +441,7 @@ class gui(forms):
 #it's indeed a start element
 #basically, if there are nodes with text on our same line, and as above, we're on an element needing a new line, then we supply one. This means that we won't put a new line in unless there is already text on this line, so we won't be inserting multiple blank lines for ending elements and starting new ones.
 #for all nodes whose starting position is on the same line as the current node, before this node in the nodes list, and whose text is not blank or whitespace
+#   log("elem:",i,type(n),self.textOnSameLine(nodes))
    if i in self.newLineElements and \
 i not in ("BR","P") and \
 type(n)!=tuple and \
@@ -432,7 +450,7 @@ self.textOnSameLine(nodes):
    if n.nodeName in self.ignoreElements:
     tnid=self.getNextNonChildNode(n,nodes)
     if tnid!=None:
-     log("found new elem:",tnid,"currently",nid)
+#     log("found new elem:",tnid,"currently",nid)
      nid=tnid-1
      continue
 #   log("text:",n)
@@ -452,16 +470,19 @@ self.textOnSameLine(nodes):
     if (self.x+lenT)<w:
 #     log("lenT %d<w %d text %s" % (lenT,w,text,))
      self._display[n].append((self.y,self.x,text))
+     if text: self.ys[self.y]=1
      self.x+=lenT
     elif self.x+lenT>w and lenT<w:
 #     log("lenT %d>w %d text %s" % (lenT,w,text,))
      self.y,self.x=self.y+1,lenT
      self._display[n].append((self.y,0,text))
+     if text: self.ys[self.y]=1
     else:
      log("wrapping")
      for t in self.wrapToFit(text, self.maxx, self.x):
 #      log("lenT %d way > than w %d, wrapping text %s" % (lenT,w,t,))
       self._display[n].append((self.y,self.x,t))
+      if t: self.ys[self.y]=1
       oldY,oldX=self.y,self.x+lenT
       self.y,self.x=self.y+1,0
      if oldX<w: self.y,self.x=oldY,oldX
@@ -508,7 +529,7 @@ self.textOnSameLine(nodes):
    self.onFocus()
    return
   self.screen.clear()
-  for n in self.nodes: #self.iterNodes(self.dom.document):
+  for n in self.nodes_flat: #self.iterNodes(self.dom.document):
 #   log("sscr.node:"+n.nodeName)
    for nY,nX,t in self._display[n][1:]:
 #    log("SSCR:screenNum=%s,nY=%s,nX=%s,t=%s" % (str(screenNum),str(nY),str(nX),str(t),))
@@ -530,7 +551,7 @@ self.textOnSameLine(nodes):
   focus=self.getFocusedElement()
   if direction not in ["previous","next"] or self.searchString=="":
    self.searchString=self.prompt('Search String:',self.entry)
-  nodes=self.nodes #self.iterNodes(self.dom.document)
+  nodes=self.nodes_flat #self.iterNodes(self.dom.document)
   nodesLength=len(nodes)
   focusIndexO=nodes.index(focus)
   if direction=="backward" or direction=="previous":
@@ -584,7 +605,7 @@ If said next text requires a line break, That line break will be attached to tha
   y=self.screenPos if y==None else y
   x=self.screenPosX if x==None else x
   pos=self.getScreenAbsolutePosition(sn,y)
-  nodes=self.nodes #self.iterNodes(self.dom.document)
+  nodes=self.nodes_flat #self.iterNodes(self.dom.document)
   l=[]
   lenNodes=len(nodes)
   i=lenNodes
@@ -596,7 +617,7 @@ If said next text requires a line break, That line break will be attached to tha
    if self._display[n][0][0]<=pos<=self._display[n][-1][0]+1:
     log("searching for pos %d, %d<=%d<=%d" % (pos,self._display[n][0][0],pos,self._display[n][-1][0],))
     for nY,nX,t in self._display[n]:
-     log("displayInNode:pos="+str(pos)+",ny="+str(nY)+",x="+str(x)+",nX="+str(nX)+",nx+len(t)="+str(nX+len(t)+1),repr(n),self._display[n])
+     log("displayInNode:pos="+str(pos)+",ny="+str(nY)+",x="+str(x)+",nX="+str(nX)+",nx+len(t)="+str(nX+len(t)+1))
      if nY==pos and (nX<=x<=nX+len(t)+1): # or t.strip()==''):
 #      log("getFocusedElement:returning "+n.nodeName+","+str(n),nY,nX,pos,y,x)
       return n
@@ -618,7 +639,7 @@ Return the first matching node.
   if type(tag)==str: tag=[tag]
   tag=[i.upper() for i in tag]
   currentNode=self.getFocusedElement()
-  nodes=self.nodes #self.iterNodes(self.dom.document)
+  nodes=self.nodes_flat #self.iterNodes(self.dom.document)
   y,x,sn=self.screenPos,self.screenPosX,self.screenNum
   absoluteY=self.getScreenAbsolutePosition(screenNum=sn,y=y)
   idx=nodes.index(currentNode)
@@ -658,6 +679,10 @@ class ActiveWindow(gui):
  """Manages the active window (the single set of screens available to the user for one webpage)
 similar in concept to a tab in Firefox
 """
+ @property
+ def f(self):
+  return self.getFocusedElement()
+
  def exit(self,*a,**kw):
   try:
    curses.echo(1)
@@ -679,8 +704,9 @@ jsRoot points to the root class of js
   self.lastMessage=""
   self.daemon=1
   self.start_url=start_url
+  self.codeHist=[]
   self.events=[]
-  self.local_vars="numLines,_display,nodes,screenNum,screenPos,screenPosX,url".split(",")
+  self.local_vars="numLines,_display,nodes,nodes_flat,screenNum,screenPos,screenPosX,url".split(",")
   self.jsQ=jsQ
   self.js=jsRoot
   self.keys=config.mainWindowKeys
@@ -1041,7 +1067,7 @@ length: the maximum length for this text entry (element.attr=maxlength is the co
   self.screen.nodelay(1)
   curses.raw(1)
   curses.noecho()
-  if history and ret:
+  if history!=None and ret:
    history.append(ret)
   return ret
 
@@ -1072,7 +1098,7 @@ length: the maximum length for this text entry (element.attr=maxlength is the co
    p=d.parentNode
    while p.nodeName!="A": p=p.parentNode
   else:
-   return
+   return self.setStatus("")
   if p.hasAttribute("href"):
    url=p.href
   else:
@@ -1152,7 +1178,7 @@ length: the maximum length for this text entry (element.attr=maxlength is the co
    e.innerHTML=ret
   elif e.nodeName=="INPUT" and e.type=="radio":
 #   self.setStatus("HFI:radio button")
-   opts=[i for i in baseForm.getElementsByTagName("input") if i.type=="radio" and i.name==e.name]
+   opts=[i for i in self.getElementsByTagName(baseForm,"input") if i.type=="radio" and i.name==e.name]
    checked=[i for i in opts if i.checked==1]
    checked=0 if len(checked)==0 else opts.index(checked[0])
    opts=[(i,i.value.strip()) for i in opts]
@@ -1394,7 +1420,7 @@ length: the maximum length for this text entry (element.attr=maxlength is the co
    self.showScreen(force=1)
 
  def execCode(self):
-  p=self.prompt("code:")
+  p=self.prompt("code:",history=self.codeHist)
   try:
    if ":"==p[0]:
     a=self.js.ref.eval(p[1:])
@@ -1526,6 +1552,12 @@ curses.KEY_LEFT:"self.prevChar()"
 
 
  
+def main2():
+ global quitFlag
+ quitFlag=0
+ j,q=mozCom.initCliFox()
+ curses.wrapper(ActiveWindow,jsQ=q,jsRoot=j,start_url=[i for i in sys.argv if ":" in i][0] if [i for i in sys.argv if ":" in i] else None)
+
 main()
 if os.path.exists('/etc/wb.conf'): execfile('/etc/wb.conf')
 if os.path.exists('./wb.conf'): execfile('./wb.conf')
@@ -1536,7 +1568,5 @@ if os.path.exists(os.path.expanduser('~/.wb/wb.conf')):
 if config.logging=='true' and not os.path.exists(os.path.expanduser('~/.wb/logs/')):
  os.mkdir(os.path.expanduser('~/.wb/logs'))
 if __name__=='__main__':
-# main()
- quitFlag=0
- j,q=mozCom.initCliFox()
- curses.wrapper(ActiveWindow,jsQ=q,jsRoot=j,start_url=[i for i in sys.argv if ":" in i][0] if [i for i in sys.argv if ":" in i] else None)
+ with profile:
+  main2()
