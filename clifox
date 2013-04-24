@@ -1568,5 +1568,4 @@ if os.path.exists(os.path.expanduser('~/.wb/wb.conf')):
 if config.logging=='true' and not os.path.exists(os.path.expanduser('~/.wb/logs/')):
  os.mkdir(os.path.expanduser('~/.wb/logs'))
 if __name__=='__main__':
- with profile:
-  main2()
+ main2()
