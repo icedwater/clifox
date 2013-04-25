@@ -1072,7 +1072,7 @@ length: the maximum length for this text entry (element.attr=maxlength is the co
    history.append(ret)
   return ret
 
- def prompt(self,prompt=":",y=None, history=None,default=None):
+ def prompt(self,prompt=":",y=None, history=None,default=None,echo='true'):
   pos=self.screen.getyx()
   if y==None: y=self.status
   self.screen.move(y,0)
@@ -1080,7 +1080,7 @@ length: the maximum length for this text entry (element.attr=maxlength is the co
   self.screen.addstr(y, 0, prompt)
   self.screen.move(y, len(prompt)+1)
   c=""
-  c=self.rl(history=history,default=default)
+  c=self.rl(history=history,default=default,echo=echo)
   self.setStatus(prompt+c)
   self.screen.move(y,0)
   self.screen.clrtoeol()
@@ -1172,7 +1172,7 @@ length: the maximum length for this text entry (element.attr=maxlength is the co
 #self.gEditbox(default=e.value)
    e.value=ret
   elif e.nodeName=="INPUT" and e.type=="password":
-   ret=self.gEditbox(default=e.value,mask="*")
+   ret=self.prompt(default=e.value,echo="*")
    e.value=ret
   elif e.nodeName=="TEXTAREA":
    ret=self.gEditbox(default=e.textContent)
