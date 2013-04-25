@@ -295,7 +295,11 @@ def initCliFox(hostname="localhost",q=None,js=None):
  if js==None: js=mzjs
  eventQ=Queue.Queue() if not q else q
  j=JSClass(name="this",value=None,id="jthis",root=0,q=eventQ,hostname=hostname)
- j.ref.eval(js)
+ try:
+  j.ref.eval(js)
+ except:
+  print 'clifox:error, dialog "%s"' % (j.ref.eval("document.title"),)
+  sys.exit(1)
  return j,eventQ
 
 mzjs="""
