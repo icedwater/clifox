@@ -330,7 +330,7 @@ class gui(forms):
   return nodes[idx]
 
  def textOnSameLine(self,nodes):
-  return 1 if self.y in self.ys else 0
+#  return 1 if self.y in self.ys else 0
   x=self.nidx-1
   text=0
   while x>0:
@@ -344,7 +344,6 @@ class gui(forms):
   return text
 # len([j for j in nodes[:self.nidx] if type(j)!=tuple and self.y in [k[0] for k in j._display] and j._nodeText]):
   
-
  def iterNodes(self,root,endings=0):
   self.js.tmp=root
   lc=[]
@@ -383,6 +382,34 @@ class gui(forms):
    lc.append(jc)
   return lc
 
+ def makeClosings(self,nodes):
+  openNodes=[]
+  nid=-1
+  lenNodes=len(nodes)
+  while nid+1<lenNodes:
+   lenNodes=len(nodes)
+   nid+=1
+   n=nodes[nid]
+   if type(n)!=tuple and n not in [x[0] for x in openNodes]:
+    openNodes.append((n,self.parentNodes(n)))
+    if len(openNodes)>1:
+     last=openNodes[-2]
+     lastOpeningParents=last[1]
+     currentOpeningParents=openNodes[-1][1]
+ #    if i in lastOpeningParents:
+     count=len(lastOpeningParents)-len(currentOpeningParents)
+#     log("count:",count,"lastParents",[i.nodeName for i in lastOpeningParents],"currentParents",[i.nodeName for i in currentOpeningParents],"in",n.nodeName,"last",last[0].nodeName)
+     if count>=0 and n.parentNode in lastOpeningParents and not (count==0 and last[0].nodeName==openNodes[-1][0].nodeName=='#text'):
+      closings=lastOpeningParents[:count]
+#      if count==0: 
+      closings.insert(0,last[0])
+      closings=[i for i in closings if i.nodeName!="#text"]
+      log("closings",[i.nodeName for i in closings])
+      [nodes.insert(nid,(0,i)) for i in closings[::-1]]
+      nid-=1
+      continue
+  return nodes
+
  def paintScreen(self,dirty=None):
   self.nidx=-1
   w=self.maxx
@@ -396,8 +423,9 @@ class gui(forms):
     self.dom.document.ref.vars[k]=None
   self.dom.document.ref.vars['parentNode']=None
   try:
-   self.nodes=self.iterNodes(self.dom.document,1)
-   nodes=self.nodes
+   nodes=self.iterNodes(self.dom.document,1)
+   nodes=self.makeClosings(nodes)
+   self.nodes=nodes
    self.nodes_flat=[i for i in nodes if type(i)!=tuple]
   except:
    generate_error_report()
@@ -416,33 +444,12 @@ class gui(forms):
 #  [setattr(j,"_flags_skip",0) for j in nodes if type(j)!=tuple]
   lenNodes=len(nodes)
   nid=-1
-  openNodes=[]
   while nid+1<lenNodes:
-   lenNodes=len(nodes)
    nid+=1
    n=nodes[nid]
 #   log("node::"+repr(n))
 #   log("nodeName::"+str(n.nodeName))
    self.nidx+=1
-   if type(n)!=tuple and n not in [x[0] for x in openNodes]:
-    openNodes.append((n,self.parentNodes(n)))
-    if len(openNodes)>1:
-     last=openNodes[-2]
-     lastOpeningParents=last[1]
-     currentOpeningParents=openNodes[-1][1]
- #    if i in lastOpeningParents:
-     count=len(lastOpeningParents)-len(currentOpeningParents)
-#     log("count:",count,"lastParents",[i.nodeName for i in lastOpeningParents],"currentParents",[i.nodeName for i in currentOpeningParents],"in",n.nodeName,"last",last[0].nodeName)
-     if count>=0 and n.parentNode in lastOpeningParents and not (count==0 and last[0].nodeName==openNodes[-1][0].nodeName=='#text'):
-      closings=lastOpeningParents[:count]
-#      if count==0: 
-      closings.insert(0,last[0])
-      closings=[i for i in closings if i.nodeName!="#text"]
-      log("closings",[i.nodeName for i in closings])
-      [nodes.insert(nid,(0,i)) for i in closings[::-1]]
-      self.nidx-=1
-      nid-=1
-      continue
 #   self.setStatus("id:%d" % (nid,))
 #we're at the end of an element
    if type(n)==tuple:
