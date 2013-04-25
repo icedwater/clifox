@@ -944,7 +944,7 @@ length: the maximum length for this text entry (element.attr=maxlength is the co
   curses.raw(1)
   if default!=None:
    ret=default
-   self.screen.addstr(y, startX, ret)
+   self.screen.addstr(y, startX, echo*len(ret) if echo!='true' else ret)
   while 1:
    c=self.screen.getch()
 #   self.setStatus("KeyPress "+str(c))
