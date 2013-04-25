@@ -339,9 +339,9 @@ continue;
 while (n && !n.nextSibling)
 {
 n=n.parentNode;
-if (endings && n){
-l.push([0,n]);
-}
+//if (endings && n){
+//l.push([0,n]);
+//}
 }
 if (!n)
 {

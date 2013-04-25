@@ -219,7 +219,7 @@ class gui(forms):
    elif n.checked!=None:
     v="x" if n.checked else " "
    else:
-    v="nullV"
+    v=""
    if n.type and n.type.lower() in ("submit","image"):
     return "[submit] %s" % (v,)
    elif n.lable:
@@ -239,6 +239,13 @@ class gui(forms):
   end=self.getNextNonChildNode(root,self.nodes_flat)
   l=self.nodes_flat[idx:end]
   return [i for i in l if i.tagName==tag]
+
+ def parentNodes(self,p):
+  ret=[]
+  while p.parentNode!=None:
+   p=p.parentNode
+   ret.append(p)
+  return ret
 
  def parentNodeNames(self,e):
   e=e.parentNode
@@ -389,8 +396,8 @@ class gui(forms):
     self.dom.document.ref.vars[k]=None
   self.dom.document.ref.vars['parentNode']=None
   try:
-   nodes=self.iterNodes(self.dom.document,1)
-   self.nodes=nodes
+   self.nodes=self.iterNodes(self.dom.document,1)
+   nodes=self.nodes
    self.nodes_flat=[i for i in nodes if type(i)!=tuple]
   except:
    generate_error_report()
@@ -409,12 +416,33 @@ class gui(forms):
 #  [setattr(j,"_flags_skip",0) for j in nodes if type(j)!=tuple]
   lenNodes=len(nodes)
   nid=-1
+  openNodes=[]
   while nid+1<lenNodes:
+   lenNodes=len(nodes)
    nid+=1
    n=nodes[nid]
 #   log("node::"+repr(n))
 #   log("nodeName::"+str(n.nodeName))
    self.nidx+=1
+   if type(n)!=tuple and n not in [x[0] for x in openNodes]:
+    openNodes.append((n,self.parentNodes(n)))
+    if len(openNodes)>1:
+     last=openNodes[-2]
+     lastOpeningParents=last[1]
+     currentOpeningParents=openNodes[-1][1]
+ #    if i in lastOpeningParents:
+     count=len(lastOpeningParents)-len(currentOpeningParents)
+#     log("count:",count,"lastParents",[i.nodeName for i in lastOpeningParents],"currentParents",[i.nodeName for i in currentOpeningParents],"in",n.nodeName,"last",last[0].nodeName)
+     if count>=0 and n.parentNode in lastOpeningParents and not (count==0 and last[0].nodeName==openNodes[-1][0].nodeName=='#text'):
+      closings=lastOpeningParents[:count]
+#      if count==0: 
+      closings.insert(0,last[0])
+      closings=[i for i in closings if i.nodeName!="#text"]
+      log("closings",[i.nodeName for i in closings])
+      [nodes.insert(nid,(0,i)) for i in closings[::-1]]
+      self.nidx-=1
+      nid-=1
+      continue
 #   self.setStatus("id:%d" % (nid,))
 #we're at the end of an element
    if type(n)==tuple:
@@ -460,8 +488,10 @@ self.textOnSameLine(nodes):
    if text==None: text=''
    if type(text)==int: text=str(text)
 #   log("text::"+str(text)) #,"node:",str(n.parentNode))
-   if text.strip():
+   text=re.sub(r"^\s*|\s*$",' ',text)
+#if text.strip():
 #text!=None and text.strip()!="":
+   if text.lstrip():
     self.newLineCount=0
     text=text.replace("\t"," ").replace("\r"," ").replace("\n"," ").replace("  "," ")
     if self.nidx>0 and type(nodes[nodes.index(n)-1])!=tuple and nodes[nodes.index(n)-1].nodeName not in ["#text","BR","P"]:
@@ -488,6 +518,7 @@ self.textOnSameLine(nodes):
       self.y,self.x=self.y+1,0
      if oldX<w: self.y,self.x=oldY,oldX
   self.numLines=self.y
+  self.xn=nodes
   return
   try:
    fh=utils.open("logs/screenTextRefresh.txt","wb")
@@ -680,6 +711,17 @@ class ActiveWindow(gui):
  """Manages the active window (the single set of screens available to the user for one webpage)
 similar in concept to a tab in Firefox
 """
+ def printStructure(self,x):
+  output=""
+  for i in x:
+   if type(i)!=tuple and i.tagName!="#text":
+    output+="<%s>\n" % (i.tagName,)
+   elif type(i)!=tuple and i.tagName=="#text":
+    output+=i.nodeValue.strip()+"\n"
+   else:
+    output+="</%s>\n" % (i[1].tagName,)
+  return output
+
  @property
  def f(self):
   return self.getFocusedElement()
