@@ -162,18 +162,14 @@ class gui(forms):
  ignoreElements=set("OPTION,NOSCRIPT,SCRIPT,STYLE".split(","))
 
  def getNextNonChildNode(self,n,inList=None):
-  t=n
-  while t!=None and t.nextSibling==None:
-   t=t.parentNode
-  if t!=None:
-   t=t.nextSibling
-   if inList and t in inList:
-    ret=inList.index(t)
-   else:
-    ret=None
-  else:
-   ret=None
-  return ret
+  try:
+   idx=self.nodes.index((0,n))+1
+  except:
+   log("err:Node not found:",n.outerHTML,"nodesLen",len(self.nodes))
+   return None
+  while type(self.nodes[idx])==tuple:
+   idx+=1
+  return idx if not inList else inList.index(self.nodes[idx])
 
  def getElementText(self,n):
   t=n.nodeName
@@ -203,7 +199,8 @@ class gui(forms):
     if t.startswith("[img] "): t=t[6:]
     t="{["+t+"]}"
     return t
-   elif [i for i in self.nodes_flat if i.parentNode==n] and n.textContent!="":
+   elif n.textContent!="":
+#[i for i in self.nodes_flat if i.parentNode==n] and n.textContent!="":
     return "{} "
    elif n.href:
     return "{%s}" % (n.href,)
@@ -365,14 +362,15 @@ class gui(forms):
 #   log("end:",end)
    if end==0:
 #    o[2:]=[urllib.unquote(j) if type(j)==str else j for j in o[2:]]
-    a={}
-    for n in xrange(6,len(o),2):
-     a[o[n]]=o[n+1]
     nn,v,t,pn=o[2:6]
     nn=nn.upper() if nn[0]!="#" else nn
 #    log("pn:",jm.get(pn,"NoKey %s in dict" % (repr(pn),)))
 #    log(id,"new node")
-    jc=mozCom.JSClass(root=self.js,name=str(ii),id=i,vars={"tagName":nn,"nodeName":nn,"nodeValue":v,"nodeType":t,"parentNode":jm.get(pn,pn),"_flags_skip":0})
+    v={"nodeName":nn,"tagName":nn,"nodeValue":v,"nodeType":t,"parentNode":jm[pn],"_flags_skip":0}
+    v.update([(o[j],o[j+1]) for j in xrange(6,len(o),2) if o[j] not in v])
+    log("v:",v)
+    jc=mozCom.JSClass(root=self.js,name=str(ii),id=i,vars=v)
+#{"tagName":nn,"nodeName":nn,"nodeValue":v,"nodeType":t,"parentNode":jm.get(pn,pn),"_flags_skip":0})
 #    log("vars2:",repr(jc),jc.ref.vars)
     jm[i]=jc
     jr[(i,ii)]=jc
@@ -384,14 +382,16 @@ class gui(forms):
 
  def makeClosings(self,nodes):
   openNodes=[]
+  ol={}
   nid=-1
   lenNodes=len(nodes)
   while nid+1<lenNodes:
    lenNodes=len(nodes)
    nid+=1
    n=nodes[nid]
-   if type(n)!=tuple and n not in [x[0] for x in openNodes]:
+   if type(n)!=tuple and n not in ol:
     openNodes.append((n,self.parentNodes(n)))
+    ol[n]=1
     if len(openNodes)>1:
      last=openNodes[-2]
      lastOpeningParents=last[1]
@@ -404,8 +404,8 @@ class gui(forms):
 #      if count==0: 
       closings.insert(0,last[0])
       closings=[i for i in closings if i.nodeName!="#text"]
-      log("closings",[i.nodeName for i in closings])
-      [nodes.insert(nid,(0,i)) for i in closings[::-1]]
+#      log("closings",[i.nodeName for i in closings])
+      if closings: [nodes.insert(nid,(0,i)) for i in closings[::-1]]
       nid-=1
       continue
   return nodes
@@ -501,8 +501,10 @@ self.textOnSameLine(nodes):
    if text.lstrip():
     self.newLineCount=0
     text=text.replace("\t"," ").replace("\r"," ").replace("\n"," ").replace("  "," ")
-    if self.nidx>0 and type(nodes[nodes.index(n)-1])!=tuple and nodes[nodes.index(n)-1].nodeName not in ["#text","BR","P"]:
-     text=text.lstrip()
+    if self.nidx>0:
+     lastNode=nodes[self.nidx-1]
+     if type(lastNode)!=tuple and lastNode.nodeName not in ("BR","P"):
+      text=text.lstrip()
     lenT=len(text)
 #     log("y=",self.y," x=",self.x," len=",lenT,"text: ",text)
     if (self.x+lenT)<w:

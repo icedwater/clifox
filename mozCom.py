@@ -1,4 +1,4 @@
-import os,sys,select,socket,time,Queue,chardet
+import os,sys,select,socket,time,Queue
 try:
  import json
 except:
@@ -29,8 +29,8 @@ class JSClass(object):
   to=type(other)
   if to==JSReference:
    other=getattr(other,"proxy",None)
-   to=type(other)
-  if type(other)==JSClass:
+   to=JSClass
+  if to==JSClass:
    oi=other.ref.id
    si=self.ref.id
    if oi==si: return 0
@@ -297,7 +297,8 @@ def initCliFox(hostname="localhost",q=None,js=None):
  j=JSClass(name="this",value=None,id="jthis",root=0,q=eventQ,hostname=hostname)
  try:
   j.ref.eval(js)
- except:
+ except Exception,e:
+  print e
   print 'clifox:error, dialog "%s"' % (j.ref.eval("document.title"),)
   sys.exit(1)
  return j,eventQ
@@ -470,6 +471,13 @@ repl.web_progress_listener.init();
 repl.killers.push([repl.web_progress_listener,repl.web_progress_listener.uninit]);
 repl.getDocJson=function(root,end)
 {
+grabVars={
+"A":["textContent","href"],
+"SELECT":["textContent"],
+"INPUT":["type","value","checked","lable","name"],
+"OPTION":["textContent"],
+"IMG":["alt","src"]
+}
 function getNode(n,addToMap,endNode)
 {
 var a,at,al,j,i;
@@ -484,6 +492,16 @@ a.push(n.nodeName);
 a.push(n.nodeValue);
 a.push(n.nodeType);
 a.push(repl.inMap(n.parentNode));
+if (a.nodeName in grabVars)
+{
+var gv=grabVars[a.nodeName];
+var gvl=gv.length;
+for (var i=0;i<gvl;i++)
+{
+a.push(gv[i]);
+a.push(n[gv[i]]);
+}
+} else {
 at=n.attributes;
 if(at)
 {
@@ -494,6 +512,7 @@ a.push(at[j].nodeName);
 a.push(at[j].nodeValue);
 };
 };
+}
 return a;
 };
 var func;
