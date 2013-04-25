@@ -71,7 +71,7 @@ class JSClass(object):
   rr.send(d)
   ret=rr.recv()
   if ret['t'] not in ("undefined","array","object","function"):
-   if r.vars: r.vars['x']=ret['a'][0]
+#   if r.vars: r.vars['x']=ret['a'][0]
    return ret['a'][0]
   if ret['a'][0]==None: return None
   a=JSClass(name=x,root=r.root,parent=self,id=ret['i'],type=ret['t'],value=ret['a'][0])
@@ -88,6 +88,7 @@ class JSClass(object):
    return object.__setattr__(self,"ref",y)
   r=self.ref
   if x in r.vars:
+   r.vars[x]=y
    return r.vars[x]
   name=x if type(x)!=JSClass else x.ref.name
   y=[y] if type(y)!=list else y
@@ -100,10 +101,10 @@ class JSClass(object):
 #~~
   if ret['t'] not in ("undefined","array","object","function"):
    return ret['a'][0]
+  if ret['t']=="undefined":
+   raise AttributeError("%s has no attribute %s" % (self.ref.name,str(x),))
   a=JSClass(name=x,root=r.root,parent=self,id=ret['i'],type=ret['t'],value=ret['a'][0])
   ar=a.ref
-  if ar.type=="undefined":
-   raise AttributeError("%s has no attribute %s" % (self.ref.name,str(r.name),))
   if ar.type in ["array","object","function"]:
    r.map[ar.id]=a
    r.rMap[(r.id,ar.name)]=a
@@ -171,14 +172,16 @@ class JSReference(object):
     self.dlog.append(ret)
     if dbg>=1: dbgl.append("in:"+ret)
     if dbg>1: log(dbgl[-1])
-    ret=str(ret)
 #error in deserialization?
     etime1=time.time()
     encodings="latin-1,utf-8".split(",")
     for enc in encodings:
      try:
-      ret=eval(unicode(ret,enc))
+      ret=eval(ret.decode(enc).encode('raw_unicode_escape').decode(enc))
+#unicode(ret,enc))
       break
+     except UnicodeDecodeError:
+      continue
      except UnicodeEncodeError:
       continue
     if dbg>1: log("jsonTime:",time.time()-etime1)

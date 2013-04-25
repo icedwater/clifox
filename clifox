@@ -188,7 +188,7 @@ class gui(forms):
   elif t=="IMG":
    if n.alt:
     return "[img] "+n.alt
-   elif n.src:
+   elif n.src and n.src.split(":",1)[0]!="data":
     return "[img] "+n.src
 #   elif n.hasChildNodes() and n.nodeValue!="":
 #    return "[img] "
@@ -363,6 +363,7 @@ class gui(forms):
     for n in xrange(6,len(o),2):
      a[o[n]]=o[n+1]
     nn,v,t,pn=o[2:6]
+    nn=nn.upper() if nn[0]!="#" else nn
 #    log("pn:",jm.get(pn,"NoKey %s in dict" % (repr(pn),)))
 #    log(id,"new node")
     jc=mozCom.JSClass(root=self.js,name=str(ii),id=i,vars={"tagName":nn,"nodeName":nn,"nodeValue":v,"nodeType":t,"parentNode":jm.get(pn,pn),"_flags_skip":0})

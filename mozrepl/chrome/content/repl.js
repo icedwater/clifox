@@ -577,7 +577,7 @@ ctx=repl._hostContext;
 repl.events=[];
 repl.killers=[];
 repl.converter=Components.classes["@mozilla.org/intl/scriptableunicodeconverter"].createInstance(Components.interfaces.nsIScriptableUnicodeConverter);
-repl.converter.charset="utf-8";
+repl.converter.charset="iso-8859-1";
 repl.mapIdList=Array();
 repl.mapObjList=Array();
 repl.mapObjList.push(ctx);
