@@ -327,7 +327,7 @@ class gui(forms):
   return nodes[idx]
 
  def textOnSameLine(self,nodes,node=None):
-"""determine if any actual text is on the current line, excluding text used for formatting or identification"""
+  """determine if any actual text is on the current line, excluding text used for formatting or identification"""
 #locate node in master list
   x=nodes.index(node) if node!=None else self.nidx-1
   text=0
@@ -473,7 +473,6 @@ class gui(forms):
 #~~
       if type(nodes[currentI])!=tuple:
 #if the element after the one we are currently on is not an end element, then add an index to it's _display property, and exit this loop (while loop will break because of finding this node)
-       log("paint:next start element found:",nodes[currentI])
        self._display[nodes[currentI]].append((1,self.y,self.x,""))
     continue
 #one-time skip of an element

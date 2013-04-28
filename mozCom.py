@@ -492,9 +492,9 @@ a.push(n.nodeName);
 a.push(n.nodeValue);
 a.push(n.nodeType);
 a.push(repl.inMap(n.parentNode));
-if (a.nodeName in grabVars)
+if (n.nodeName in grabVars)
 {
-var gv=grabVars[a.nodeName];
+var gv=grabVars[n.nodeName];
 var gvl=gv.length;
 for (var i=0;i<gvl;i++)
 {

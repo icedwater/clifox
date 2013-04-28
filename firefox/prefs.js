@@ -9,10 +9,10 @@
  */
 
 user_pref("app.update.lastUpdateTime.addon-background-update-timer", 1367029108);
-user_pref("app.update.lastUpdateTime.background-update-timer", 1367029590);
+user_pref("app.update.lastUpdateTime.background-update-timer", 1367084525);
 user_pref("app.update.lastUpdateTime.blocklist-background-update-timer", 1367029228);
-user_pref("app.update.lastUpdateTime.browser-cleanup-thumbnails", 1367032950);
-user_pref("app.update.lastUpdateTime.search-engine-update-timer", 1367029470);
+user_pref("app.update.lastUpdateTime.browser-cleanup-thumbnails", 1367113086);
+user_pref("app.update.lastUpdateTime.search-engine-update-timer", 1367106006);
 user_pref("browser.cache.disk.capacity", 358400);
 user_pref("browser.cache.disk.smart_size.first_run", false);
 user_pref("browser.cache.disk.smart_size.use_old_max", false);
@@ -29,8 +29,8 @@ user_pref("browser.sessionstore.resume_from_crash", false);
 user_pref("browser.shell.checkDefaultBrowser", false);
 user_pref("browser.startup.homepage_override.mstone", "ignore");
 user_pref("datareporting.healthreport.currentDaySubmissionFailureCount", 0);
-user_pref("datareporting.healthreport.lastDataSubmissionRequestedTime", "1366955259644");
-user_pref("datareporting.healthreport.nextDataSubmissionTime", "1367042274670");
+user_pref("datareporting.healthreport.lastDataSubmissionRequestedTime", "1367091860165");
+user_pref("datareporting.healthreport.nextDataSubmissionTime", "1367178875491");
 user_pref("datareporting.policy.dataSubmissionPolicyAccepted", true);
 user_pref("datareporting.policy.dataSubmissionPolicyAcceptedVersion", 1);
 user_pref("datareporting.policy.dataSubmissionPolicyNotifiedTime", "1366942651552");
