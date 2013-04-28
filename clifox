@@ -816,6 +816,10 @@ jsRoot points to the root class of js
    if config.limitMessages=='true':
      self.updateStatus("No previous %s" % s)
 
+ def onStateChange(self,e):
+  self.events.append(e)
+#  self.setStatus("event onStateChange")
+
  def load(self,e):
   self.page.linkedBrowser.ref.jsrefresh()
   if e.target.location.href=="about:blank":
