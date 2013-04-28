@@ -23,7 +23,7 @@ class JSClass(object):
   return self.length
 
  def __hash__(self):
-  return self.ref.id.__hash__()
+  return self.ref.idh
 
  def __cmp__(self,other):
   to=type(other)
@@ -137,6 +137,7 @@ class JSClass(object):
 class JSReference(object):
  def __init__(self,name="",value="",id="",root=0,parent=None,type="object",q=None,vars={},hostname="localhost",proxy=None):
   self.id=id
+  self.idh=self.id.__hash__()
   self.proxy=proxy
   self.root=self.proxy if root==0 else root
 # if root!=0 else self
