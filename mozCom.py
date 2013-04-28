@@ -87,9 +87,6 @@ class JSClass(object):
   if x=="ref":
    return object.__setattr__(self,"ref",y)
   r=self.ref
-  if x in r.vars:
-   r.vars[x]=y
-   return r.vars[x]
   name=x if type(x)!=JSClass else x.ref.name
   y=[y] if type(y)!=list else y
   ids=[i.ref.id for i in y if type(i)==JSClass]
@@ -100,6 +97,7 @@ class JSClass(object):
   ret=r.root.ref.recv()
 #~~
   if ret['t'] not in ("undefined","array","object","function"):
+   if x in r.vars: r.vars[x]=ret['a'][0]
    return ret['a'][0]
   if ret['t']=="undefined":
    raise AttributeError("%s has no attribute %s" % (self.ref.name,str(x),))
@@ -108,6 +106,7 @@ class JSClass(object):
   if ar.type in ["array","object","function"]:
    r.map[ar.id]=a
    r.rMap[(r.id,ar.name)]=a
+   if x in r.vars: r.vars[x]=a
    return a
 
  def __call__(self,*a,**kw):
