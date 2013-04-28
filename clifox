@@ -327,23 +327,25 @@ class gui(forms):
   return nodes[idx]
 
  def textOnSameLine(self,nodes,node=None):
-#  return 1 if self.y in self.ys else 0
-#  log("tosl:",nodes,node)
+"""determine if any actual text is on the current line, excluding text used for formatting or identification"""
+#locate node in master list
   x=nodes.index(node) if node!=None else self.nidx-1
-#  log("tosl:x",x)
   text=0
-#  log("tosl:line",self.y,"node:",self._display[nodes[self.nidx]])
   while x>0:
+#navigate backward through the list
    n=nodes[x]
+#skip tuples, because they will not ever have true text
    if type(n)==tuple: x-=1; continue
    d=self._display[n]
-   log("tosl:check","line",self.y,"element",d)
+#get list of all text strings from this element on the line we are looking for
    l=[j for j in d if j[1]==self.y]
-   log("tosl:l:",l)
+#if nothing in l, then we've moved backward to before our looked-for line, without finding text, so return 0
    if not l: return 0
+#get lsit of all non-formatting text
    t=[j for j in l if j[0]==0]
-   log("tosl:t:",t)
+#if nothing in this list, we move to the previous node
    if not t: x-=1; continue
+#we've found text by elimination of all non-text and non-looked-for lines
    return 1
   return 0
 #   if "".join([i[3] for i in t]).strip(): text=1; return text
@@ -451,29 +453,22 @@ class gui(forms):
 #if a node in nodes is an end marker, it will be a tuple. otherwise, it will be a node
 #set all lists for each node in nodes to an empty list, as we are basically clearing all previous positions
   [self._display.__setitem__(j,[]) for j in self.nodes_flat]
-#  [setattr(j,"_flags_skip",0) for j in nodes if type(j)!=tuple]
   lenNodes=len(nodes)
   nid=-1
   while nid+1<lenNodes:
+   self.nidx+=1
    nid+=1
    n=nodes[nid]
-#   log("node::"+repr(n))
-#   log("nodeName::"+str(n.nodeName))
-   self.nidx+=1
-#   self.setStatus("id:%d" % (nid,))
 #we're at the end of an element
-   log("node:",repr(n))
    if type(n)==tuple:
     n,t=n[1],n[1].nodeName if n[1].nodeName else None
-    log("paint:tuple:",t)
-#    log("end node",t)
     if t in self.newLineElements and t !="A":
-     log("paint:found non-link closing element")
 #if we need to separate the end of this element from the next, e.g. this is the end of an h1 element, and we have to put a new line, then do so
+#skip links, because we can put text after them, and keep from using up excessive vertical pages
      self.y+=1; self.x=0
      currentI=self.nidx
      while currentI+1<lenNodes and type(nodes[currentI])==tuple:
-#while we're still in the nodes list, and we are encountering end elements, e.g. </h1>></div>, etc
+#while we're still in the nodes list, and we are encountering end elements, e.g. </h1></div>, etc
       currentI+=1
 #~~
       if type(nodes[currentI])!=tuple:
@@ -483,19 +478,16 @@ class gui(forms):
     continue
 #one-time skip of an element
    if n._flags_skip:
-    log("paint:skipping",n.nodeName)
     n._flags_skip=0; continue
 #maybe make the below an else statement with the tuple check above?
    self._display[n].append((1,self.y,self.x,''))
    i=n.nodeName
+#skip script,style,noscript, etc
    if i in self.ignoreElements:
-    log("paint:ignoring",n.nodeName)
     tnid=self.getNextNonChildNode(n,nodes)
     if tnid!=None:
-#     log("found new elem:",tnid,"currently",nid)
      nid=tnid-1
      self.nidx=nid
-     log("paint:skipping to",nodes[self.nidx+1].nodeName)
      continue
 #if this starting element requires a new line
 #it's not a new line type itself, e.g. paragraph or line break
@@ -507,39 +499,30 @@ class gui(forms):
 i not in ("BR","P") and \
 type(n)!=tuple and \
 self.textOnSameLine(nodes):
-    log("paint:new element for new line",n.nodeName)
     self.y+=1; self.x=0; self._display[n].append((1,self.y,self.x,''))
    formatOnly,text=self.getElementText(n)
-#   log("getElementText:",i,text)
    if text==None: text=''
    if type(text)==int: text=str(text)
-#   log("text::"+str(text)) #,"node:",str(n.parentNode))
    text=re.sub(r"^\s+|\s+$",' ',text)
 #if text.strip():
-#text!=None and text.strip()!="":
    if text.lstrip():
     self.newLineCount=0
 #    text=text.replace("\t"," ").replace("\r"," ").replace("\n"," ").replace("  "," ")
     if self.nidx>0:
      lastNode=nodes[self.nidx-1]
-     if type(lastNode)!=tuple and lastNode.nodeName not in ("BR","P"):
-      text=text.lstrip()
+#     if type(lastNode)!=tuple and lastNode.nodeName not in ("BR","P"):
+#      text=text.lstrip()
     lenT=len(text)
-#     log("y=",self.y," x=",self.x," len=",lenT,"text: ",text)
     if (self.x+lenT)<w:
-#     log("lenT %d<w %d text %s" % (lenT,w,text,))
      self._display[n].append((formatOnly,self.y,self.x,text))
      if text: self.ys[self.y]=1
      self.x+=lenT
     elif self.x+lenT>w and lenT<w:
-#     log("lenT %d>w %d text %s" % (lenT,w,text,))
      self.y,self.x=self.y+1,lenT
      self._display[n].append((formatOnly,self.y,0,text))
      if text: self.ys[self.y]=1
     else:
-     log("wrapping")
      for t in self.wrapToFit(text, self.maxx, self.x):
-#      log("lenT %d way > than w %d, wrapping text %s" % (lenT,w,t,))
       self._display[n].append((formatOnly,self.y,self.x,t))
       if t: self.ys[self.y]=1
       oldY,oldX=self.y,self.x+lenT
