@@ -23,7 +23,7 @@ for fn in files:
  while i>0:
   i-=1
   l=lines[i].strip()
-  if l.split(" ",1)[0]=="def":
+  if l.split(" ",1)[0]=="def" and l.split("(",1)[0].strip().rsplit(" ",1)[1]!="__getattr__":
    spaces=lines[i].find("def ")
    lines.insert(i,(" "*spaces)+"@profile %s" % (sig,))
  out="\n".join(lines)

@@ -1,4 +1,4 @@
-import re
+import re,sys
 try:
  import line_profiler
 except:
