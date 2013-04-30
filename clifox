@@ -174,7 +174,7 @@ class gui(forms):
  def getElementText(self,n):
   t=n.nodeName
   t=t if t else 'unnamedNode'
-  if self.ignoreElements.intersection(self.parentNodeNames(n)): return 0,None
+#  if self.ignoreElements.intersection(self.parentNodeNames(n)): return 0,None
   if t=="#text":
    return 0,n.nodeValue
   elif t=="HR":
@@ -393,6 +393,7 @@ class gui(forms):
   return lc
 
  def makeClosings(self,nodes):
+#  log("makeclosings")
   openNodes=[]
   ol={}
   nid=-1
@@ -417,12 +418,20 @@ class gui(forms):
       closings.insert(0,last[0])
       closings=[i for i in closings if i.nodeName!="#text"]
 #      log("closings",[i.nodeName for i in closings])
-      if closings: [nodes.insert(nid,(0,i)) for i in closings[::-1]]
-      nid-=1
+      if closings:
+       [nodes.insert(nid,(0,i)) for i in closings[::-1]]
+       nid-=1
       continue
+  _c=nodes[nid]
+  c=_c if type(_c)!=tuple else _c[1]
+  parents=self.parentNodes(c)
+#if not tuple
+  if c==_c: parents.insert(0,c)
+  [nodes.append((0,i)) for i in parents if i.nodeName!="#text"]
   return nodes
 
  def paintScreen(self,dirty=None):
+#  log("paintScreen")
   self.nidx=-1
   w=self.maxx
   self.y,self.x=0,0
@@ -820,6 +829,11 @@ jsRoot points to the root class of js
   self.events.append(e)
 #  self.setStatus("event onStateChange")
 
+ def tabSelect(self,e):
+  self.page.linkedBrowser.ref.jsrefresh()
+  self.page=e.target
+  self.restoreWindow(self.page)
+
  def load(self,e):
   self.page.linkedBrowser.ref.jsrefresh()
   if e.target.location.href=="about:blank":
@@ -835,6 +849,7 @@ jsRoot points to the root class of js
 
 
  def onStatusChange(self,e):
+  time.sleep(0.01)
   m=e.aMessage
   if self.lastMessage!=m:
    self.setStatus(m)
@@ -1543,7 +1558,9 @@ length: the maximum length for this text entry (element.attr=maxlength is the co
 #  self.events.append(ev)
   log("mainWindow:event:",str(ev))
   try:
-   m=getattr(self,ev['t'])
+   n=ev['t']
+   n=n[0].lower()+n[1:]
+   m=getattr(self,n)
    try:
     return m(*ev['a'])
    except Exception,e:
@@ -1556,6 +1573,7 @@ length: the maximum length for this text entry (element.attr=maxlength is the co
     generate_error_report()
 
  def event(self,e):
+  self.events.append(e)
   if e.get("m","")=='w': return
   self.setStatus("event %s" % (e.get("t","noName"),))
 

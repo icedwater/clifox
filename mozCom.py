@@ -41,7 +41,7 @@ class JSClass(object):
   return self.__getattr__(x)
 
  def __setitem__(self,x,y):
-  return self.__setattr(x,y)
+  return self.__setattr(x,y,1)
 
  def __repr__(self):
   r=self.ref
@@ -83,10 +83,13 @@ class JSClass(object):
    r.rMap[(r.id,ar.name)]=a
    return a
 
- def __setattr__(self,x,y):
+ def __setattr__(self,x,y,override=0):
   if x=="ref":
    return object.__setattr__(self,"ref",y)
   r=self.ref
+  if x in r.vars and override==0 and x.startswith("_"):
+   r.vars[x]=y
+   return y
   name=x if type(x)!=JSClass else x.ref.name
   y=[y] if type(y)!=list else y
   ids=[i.ref.id for i in y if type(i)==JSClass]
@@ -403,6 +406,7 @@ init:function() {
 gBrowser.browsers.forEach(function (browser) {
 this._toggleProgressListener(browser.webProgress, true);
 }, this);
+gBrowser.tabContainer.addEventListener("TabSelect", this, false);
 gBrowser.tabContainer.addEventListener("TabOpen", this, false);
 gBrowser.tabContainer.addEventListener("TabClose", this, false);
 },
@@ -411,14 +415,25 @@ uninit:function() {
 gBrowser.browsers.forEach(function (browser){
 this._toggleProgressListener(browser.webProgress, false);
 }, this);
+gBrowser.tabContainer.removeEventListener("TabSelect", this, false);
 gBrowser.tabContainer.removeEventListener("TabOpen", this, false);
 gBrowser.tabContainer.removeEventListener("TabClose", this, false);
 },
 
 handleEvent:function(aEvent) {
+if(aEvent.type=="TabSelect")
+{
+try{
+var e=aEvent;
+repl.print({"m":"e","t":e.type,"a":[repl.addMap(e)]});
+}catch(e){
+repl.print({"m":"t","a":[e.toString()]});
+};
+} else {
 let tab = aEvent.target;
 let webProgress = gBrowser.getBrowserForTab(tab).webProgress;
 this._toggleProgressListener(webProgress, ("TabOpen" == aEvent.type));
+}
 },
 
 onStatusChange:function(aWebProgress,aRequest,aStatus,aMessage)
