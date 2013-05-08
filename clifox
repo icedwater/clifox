@@ -167,7 +167,7 @@ class gui(forms):
   except:
    log("err:Node not found:",n.outerHTML,"nodesLen",len(self.nodes))
    return None
-  while type(self.nodes[idx])==tuple:
+  while idx+1<len(self.nodes) and type(self.nodes[idx])==tuple:
    idx+=1
   return idx if not inList else inList.index(self.nodes[idx])
 
@@ -598,6 +598,11 @@ self.textOnSameLine(nodes):
   self.pagePosition()
   return None
 
+ def closePage(self):
+  self.js.gBrowser.selectedTab=self.page
+  self.js.gBrowser.tabs.ref.jsrefresh()
+  self.js.gBrowser.removeCurrentTab()
+
  def searchPage(self,direction="forward"):
   focus=self.getFocusedElement()
   if direction not in ["previous","next"] or self.searchString=="":
@@ -831,6 +836,8 @@ jsRoot points to the root class of js
 
  def tabSelect(self,e):
   self.page.linkedBrowser.ref.jsrefresh()
+  if self.page==e.target:
+   return
   self.page=e.target
   self.restoreWindow(self.page)
 
