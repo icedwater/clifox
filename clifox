@@ -174,12 +174,13 @@ class gui(forms):
    idx+=1
   return idx if not inList else inList.index(self.nodes[idx])
 
+ ws=string.whitespace+string.printable
  def getElementText(self,n):
   t=n.nodeName
   t=t if t else 'unnamedNode'
 #  if self.ignoreElements.intersection(self.parentNodeNames(n)): return 0,None
   if t=="#text":
-   return 0,n.nodeValue
+   return 0,"".join([i for i in n.nodeValue if i in self.ws]).replace("\n"," ").replace("\r"," ").replace("  "," ")
   elif t=="HR":
    return 0,"-"*self.maxy
   elif t=="LI":
