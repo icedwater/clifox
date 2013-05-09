@@ -129,13 +129,16 @@ class forms(object):
   return ret
 
  def gCheckbox(self,**kw):
+  kw['screen']=self.screen
+  kw['maxy']=self.maxy
+  kw['maxx']=self.maxx
   self.save()
   ret=None
   try:
-   c=Checkbox()
+   c=Checkbox(**kw)
    ret=c.loop()
-  except:
-   pass
+  except Exception,e:
+   generate_error_report()
   self.restore()
   return ret
 
@@ -213,7 +216,7 @@ class gui(forms):
     v=n.value
     if n.type and n.type.lower()=="password":
      v="*"*len(v)
-   elif n.checked!=None:
+   if n.checked!=None:
     v="x" if n.checked else " "
    else:
     v=""
@@ -1270,8 +1273,8 @@ length: the maximum length for this text entry (element.attr=maxlength is the co
     ret[0].checked=1
     [setattr(o,"checked",0) for o,p in opts if o!=ret[0]]
   elif e.nodeName=="INPUT" and e.type=="checkbox":
-   self.setStatus("HFI:checkbox")
-   ret=self.gCheckbox(title=e.name,values=[e.name])
+#   self.setStatus("HFI:checkbox")
+   ret=self.gCheckbox(title=e.name,values=[e.name],checked=e.checked)
    e.checked=ret
   else:
    ret=self.gEditbox(default=e.value,type=e.type)

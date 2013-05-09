@@ -9,9 +9,8 @@ class Checkbox(object):
   self.checked=0
   [setattr(self,k,v) for k,v in kw.items()]
   self.screen.clear()
-  self.screen.addstr(0,0,title)
+  self.screen.addstr(0,0,self.title)
   self.draw()
-  self.loop()
 
  def draw(self):
   self.screen.move(1,0)
@@ -26,15 +25,18 @@ class Checkbox(object):
  def loop(self):
   while 1:
    c=self.screen.getch()
+   if c==-1:
+    time.sleep(0.001)
+    continue
+   log("chkbox:key:",c)
    if c==32:
-    self.checked*=-1
+    self.checked=0 if self.checked==1 else 1
+    log("chkbox:draw")
     self.draw()
-   elif c==curses.KEY_BACKSPACE:
-    return None
-   elif c==ord("\n"):
-    return 1 if self.checked>0 else 0
-   else:
-    time.sleep(0.01)
+   if c==curses.KEY_BACKSPACE:
+    return self.checked
+   if c==ord("\n"):
+    return self.checked
 
 class Editbox(object):
  """Editing widget using the interior of a window object.
