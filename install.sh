@@ -1,11 +1,15 @@
 #!/bin/bash
-echo "warning. this install will remove all saved firefox, thunderbird, and other mozilla settings from your profile. This includes all thunderbird messages, firefox favorites, etc. You have ten seconds to cancel this install."
+root=$(pwd)
+echo "warning. this install will remove all saved firefox settings from your profile. This includes all thunderbird messages, firefox favorites, etc. You have ten seconds to cancel this install."
 sleep 10
-rm -Rf ~/.mozilla
 if [ ! -f "./clifox" ]
 then
 echo "You are not in the root of your source tree. Please change to the top-level directory, containing the clifox binary and the firefox and mozrepl directorys."
 exit 0
+fi
+if [ -d ~/.mozilla/firefox ]
+then
+rm -Rf ~/.mozilla/firefox
 fi
 if [ ! -f "./ff/firefox/firefox" ]
 then
@@ -29,7 +33,7 @@ exit 0
 fi
 echo "creating default profile by running firefox"
 timeout 10 xvfb-run "$ff/firefox"
-echo "athering profile paths"
+echo "gathering profile paths"
 profid=$(ls -1 ~/.mozilla/firefox | grep -i default | head -n1)
 profdir=~/.mozilla/firefox/$profid
 echo "profile directory:$profdir"
@@ -45,6 +49,15 @@ cp $profdir/extensions.ini $profdir/extensions2.ini
 timeout 5 xvfb-run $ff/firefox
 cp $profdir/extensions2.ini $profdir/extensions.ini 
 touch $profdir/extensions.ini
+echo "copying clifox config."
+if [ ! -d ~/.clifox ]
+then
+mkdir ~/.clifox
+fi
+if [ ! -x ~/.clifox/clifox.conf ]
+then
+cp "$root/conf/clifox.conf" ~/.clifox/
+fi
 echo "running firefox. mozrepl should display a message to this console with its listening status."
 xvfb-run $ff/firefox
 
