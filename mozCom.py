@@ -1,9 +1,13 @@
-import os,sys,select,socket,time,Queue
+import os,sys,select,socket,time,Queue,urllib
 try:
- import json
+ try:
+  import json
+ except:
+  import simplejson as json
 except:
- import simplejson as json
-dbg=2
+ print("Either the JSON or simplejson module needs to be installed. Data is passed from Firefox to Python using the JSON format.")
+ sys.exit(1)
+dbg=1
 dbgl=[]
 from utils import log
 true=True
@@ -173,14 +177,16 @@ class JSReference(object):
    if "\n" in self.data:
     ret,self.data=self.data.split("\n",1)
     self.dlog.append(ret)
-    if dbg>=1: dbgl.append("in:"+ret)
+    if dbg>=1: dbgl.append("in:"+str(ret))
     if dbg>1: log(dbgl[-1])
 #error in deserialization?
     etime1=time.time()
     encodings="latin-1,utf-8".split(",")
     for enc in encodings:
      try:
-      ret=eval(ret.decode(enc).encode('raw_unicode_escape').decode(enc))
+      ret=str(json.loads(ret))
+      ret=eval(ret)
+#ret.decode(enc).encode('raw_unicode_escape').decode(enc))
 #unicode(ret,enc))
       break
      except UnicodeDecodeError:
