@@ -230,7 +230,25 @@ data=JSON.stringify({"m":"t","a":[e.toString(),"json.stringify.error",f,data.toS
         data + (appendNewline == false ? '' : '\n');
 try
 {
-string=this.converter.ConvertFromUnicode(string);
+var d=string;
+string="";
+for(i=0;i<d.length;i++)
+{
+if(d.charCodeAt(i)<128)
+{
+string+=d[i];
+} else {
+var z=d.charCodeAt(i).toString(16);
+var nl=4-z.length;
+while (nl>0)
+{
+z="0"+z;
+nl-=1;
+}
+string+="\\u"+z;
+}
+}
+//string=this.converter.ConvertFromUnicode(string);
 } catch(e) {
 this.onOutput(JSON.stringify({"m":"w","a":[e.toString()]})+"\n");
 }
@@ -577,7 +595,7 @@ ctx=repl._hostContext;
 repl.events=[];
 repl.killers=[];
 repl.converter=Components.classes["@mozilla.org/intl/scriptableunicodeconverter"].createInstance(Components.interfaces.nsIScriptableUnicodeConverter);
-repl.converter.charset="iso-8859-1";
+repl.converter.charset="iso-8859-2";
 repl.mapIdList=Array();
 repl.mapObjList=Array();
 repl.mapObjList.push(ctx);
