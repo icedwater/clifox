@@ -1,15 +1,15 @@
 #!/usr/bin/python
 #main browser file (url fetcher, GUI wrapper, main window thread)
-import gc
-import locale
-locale.setlocale(locale.LC_ALL,"")
 import sys
 reload(sys)
 sys.setdefaultencoding('utf-8')
-import inspect
 import os,os.path
 path=os.path.realpath(__file__).rsplit(os.sep,1)[0]+"/modules"
 sys.path.append(path)
+import gc,unidecode
+import locale
+locale.setlocale(locale.LC_ALL,"")
+import inspect
 import re,time,curses,curses.ascii,sys,Queue,utils,threading,traceback,string,hashlib,shelve,warnings,urlparse,binascii,urllib
 import StringIO as stringio
 import mozCom
@@ -518,6 +518,7 @@ self.textOnSameLine(nodes):
    formatOnly,text=self.getElementText(n)
    if text==None: text=''
    if type(text)==int: text=str(text)
+   text=unidecode.unidecode(text)
    text=re.sub(r"^\s+|\s+$",' ',text)
 #if text.strip():
    if text.lstrip():
