@@ -235,7 +235,7 @@ class JSReference(object):
   name=o['a'][0]
   v=o['a'][1]
   if self.isIdRef(v):
-   m=JSObject(id=v[0],parent=p,name=o['a'][0],root=self.root)
+   m=JSClass(id=v[0],parent=p,name=o['a'][0],root=self.root)
   else:
    m=v
   p[name]=m
