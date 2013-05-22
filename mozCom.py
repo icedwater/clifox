@@ -184,8 +184,8 @@ class JSReference(object):
     encodings="latin-1,utf-8".split(",")
     for enc in encodings:
      try:
-      ret=str(json.loads(ret))
-      ret=eval(ret)
+      ret=json.loads(ret)
+#      ret=eval(ret)
 #ret.decode(enc).encode('raw_unicode_escape').decode(enc))
 #unicode(ret,enc))
       break
@@ -471,12 +471,29 @@ repl.print({"m":"t","a":[e.toString()]});
 
 QueryInterface: function(aIID)
 {
-if (aIID.equals(Components.interfaces.nsIWebProgressListener) || aIID.equals(Components.interfaces.nsISupportsWeakReference) || aIID.equals(Components.interfaces.nsISupports))
+if (aIID.equals(Components.interfaces.nsIAuthPrompt2)||aIID.equals(Components.interfaces.nsIAuthPrompt)||aIID.equals(Components.interfaces.nsIWebProgressListener) || aIID.equals(Components.interfaces.nsISupportsWeakReference) || aIID.equals(Components.interfaces.nsISupports))
 {
 return this;
 };
 throw Components.results.NS_NOINTERFACE;
 },
+
+prompt: function(dialogTitle, text, passwordRealm, savePassword, defaultText, result)
+{
+repl.print({"M":"w","a":["authPrompt",dialogTitle, text, passwordRealm, savePassword, defaultText, result]});
+return true;
+},
+promptPassword: function(dialogTitle, text, passwordRealm, savePassword, pwd)
+{
+repl.print({"M":"w","a":["authPromptPassword",dialogTitle, text, passwordRealm, savePassword, pwd]});
+return true;
+},
+promptUsernameAndPassword: function(dialogTitle, text, passwordRealm, savePassword, user, pwd)
+{
+repl.print({"M":"w","a":["authPromptUsernameAndPassword",dialogTitle, text, passwordRealm, savePassword, user, pwd]});
+return true;
+},
+
 
 _toggleProgressListener:function(aWebProgress, aIsAdd)
 {
@@ -490,6 +507,48 @@ aWebProgress.removeProgressListener(this);
 };
 repl.web_progress_listener.init();
 repl.killers.push([repl.web_progress_listener,repl.web_progress_listener.uninit]);
+
+repl.windowGuiKiller=
+{
+obs:null,
+observe : function(aSubject, aTopic, aData)
+{
+repl.print({"m":"w","a":["observer",aTopic]});
+if(aTopic=="content-document-global-created")
+{
+var wo;
+aSubject.QueryInterface(Ci.nsIDOMWindow);
+wo=aSubject.wrappedJSObject;
+wo.alert=function(){};
+wo.confirm=function(){};
+wo.prompt=function(){};
+}
+if(aTopic=="dom-window-destroyed")
+//"content-document-global-created")
+{
+//this.kill();
+aSubject.QueryInterface(Ci.nsIDOMWindow);
+wo=aSubject.wrappedJSObject;
+delete wo.alert;
+delete wo.confirm;
+delete wo.prompt;
+}
+},
+kill: function()
+{
+this.obs.removeObserver(this,"content-document-global-created");
+this.obs.removeObserver(this,"dom-window-destroyed");
+}
+}
+
+var obs;
+obs=Components.classes["@mozilla.org/observer-service;1"].getService(Components.interfaces.nsIObserverService);
+repl.windowGuiKiller.obs=obs;
+obs.addObserver(repl.windowGuiKiller, "content-document-global-created", false);
+obs.addObserver(repl.windowGuiKiller, "dom-window-destroyed", false);
+//content-document-global-created", false);
+repl.killers.push([repl.windowGuiKiller,repl.windowGuiKiller.kill]);
+
 repl.getDocJson=function(root,end)
 {
 grabVars={
