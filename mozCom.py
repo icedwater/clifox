@@ -7,7 +7,7 @@ try:
 except:
  print("Either the JSON or simplejson module needs to be installed. Data is passed from Firefox to Python using the JSON format.")
  sys.exit(1)
-dbg=1
+dbg=0
 dbgl=[]
 from utils import log
 true=True
@@ -300,16 +300,19 @@ def delMapKey(m,k):
   del m[k]
  return list(l)
 
-def initCliFox(hostname="localhost",q=None,js=None):
+def initCliFox(hostname="localhost",q=None,js=None,ignoreErrors=0):
  if js==None: js=mzjs
  eventQ=Queue.Queue() if not q else q
  j=JSClass(name="this",value=None,id="jthis",root=0,q=eventQ,hostname=hostname)
  try:
   j.ref.eval(js)
  except Exception,e:
-  print e
-  print 'clifox:error, dialog "%s"' % (j.ref.eval("document.title"),)
-  sys.exit(1)
+  if ignoreErrors==1:
+   pass
+  else:
+   print e
+   print 'clifox:error, dialog "%s"' % (j.ref.eval("document.title"),)
+   sys.exit(1)
  return j,eventQ
 
 mzjs="""
@@ -442,6 +445,18 @@ this._toggleProgressListener(webProgress, ("TabOpen" == aEvent.type));
 }
 },
 
+//readd if needed; for now, onStateChange tethered to a page_stop||is_window is doing the trick
+xx_onLocationChange: function(aWebProgress, aRequest, aURI)
+{
+try{
+var o={"aWebProgress":aWebProgress,"aRequest":aRequest,"aURI":aURI};
+var oid=repl.justAddMap(o);
+repl.print({"m":"E","a":[oid],"t":"onAddressChange"});
+}catch(e){
+repl.print({"m":"t","a":[e.toString()]});
+};
+},
+
 onStatusChange:function(aWebProgress,aRequest,aStatus,aMessage)
 {
 try{
@@ -456,7 +471,7 @@ repl.print({"m":"t","a":[e.toString()]});
 onStateChange:function(aWebProgress,aRequest,aStateFlags,aStatus)
 {
 //repl.print({"m":"w","a":["onStatusChange"]});
-if ((aStateFlags & Components.interfaces.nsIWebProgressListener.STATE_START) && (aStateFlags & Components.interfaces.nsIWebProgressListener.STATE_IS_DOCUMENT) && (aWebProgress.DOMWindow==aWebProgress.DOMWindow.top))
+if ((aStateFlags & Components.interfaces.nsIWebProgressListener.STATE_STOP) && (aStateFlags & Components.interfaces.nsIWebProgressListener.STATE_IS_WINDOW) && (aWebProgress.DOMWindow==aWebProgress.DOMWindow.top))
 {
 //repl.print({"m":"w","a":["onStatusChange2"]});
 try{

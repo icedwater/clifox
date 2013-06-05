@@ -16,6 +16,7 @@ import mozCom
 from guiObjects import *
 from utils import log
 profiler=0
+import guiTree
 
 if "-debug" in sys.argv:
  utils.log("debugging started, port will open on 7777 when page loads")
@@ -129,6 +130,12 @@ class forms(object):
   except:
    pass
   return ret
+
+ def gTree(self,params):
+  self.save()
+  g=guiTree.nodeTreeview(params)
+  g(self.screen)
+  self.restore()
 
  def gCheckbox(self,**kw):
   kw['screen']=self.screen
@@ -846,6 +853,10 @@ jsRoot points to the root class of js
  def onStateChange(self,e):
   self.events.append(e)
 #  self.setStatus("event onStateChange")
+#  self.page.linkedBrowser.ref.jsrefresh()
+#  self.dom=self.page.linkedBrowser.contentDocument.defaultView
+#  self.pageRefreshData()
+  self.restoreWindow(self.page)
 
  def tabSelect(self,e):
   self.page.linkedBrowser.ref.jsrefresh()
@@ -855,6 +866,7 @@ jsRoot points to the root class of js
   self.restoreWindow(self.page)
 
  def load(self,e):
+  return
   self.page.linkedBrowser.ref.jsrefresh()
   if e.target.location.href=="about:blank":
    return
@@ -866,7 +878,6 @@ jsRoot points to the root class of js
    log("setting dom to %s" % (str(self.dom),))
    self.setStatus("page %s loaded" % (self.dom.location.href,))
    self.pageRefreshData()
-
 
  def onStatusChange(self,e):
   time.sleep(0.01)
