@@ -851,6 +851,11 @@ jsRoot points to the root class of js
      self.updateStatus("No previous %s" % s)
 
  def onStateChange(self,e):
+  """Ignore the first onStateChange called on the about:blank document"""
+  old=self.dom.document.ref.id
+  self.dom.document.ref.jsrefresh()
+  if self.dom.document.ref.id!=old:
+   return
   self.events.append(e)
 #  self.setStatus("event onStateChange")
 #  self.page.linkedBrowser.ref.jsrefresh()
@@ -859,6 +864,7 @@ jsRoot points to the root class of js
   self.restoreWindow(self.page)
 
  def tabSelect(self,e):
+  """We've switched to a new tab, and signaled firefox appropriately"""
   self.page.linkedBrowser.ref.jsrefresh()
   if self.page==e.target:
    return
@@ -866,6 +872,7 @@ jsRoot points to the root class of js
   self.restoreWindow(self.page)
 
  def load(self,e):
+  """trigger on page loads. currently replaced with the onStateChange event to account for the goBack method's lack of triggering of the load event."""
   return
   self.page.linkedBrowser.ref.jsrefresh()
   if e.target.location.href=="about:blank":
@@ -880,6 +887,7 @@ jsRoot points to the root class of js
    self.pageRefreshData()
 
  def onStatusChange(self,e):
+  """print status messages to status bar"""
   time.sleep(0.01)
   m=e.aMessage
   if self.lastMessage!=m:
@@ -887,6 +895,7 @@ jsRoot points to the root class of js
    self.lastMessage=m
 
  def event(self,e):
+  """triggers on any event not covered above"""
   self.setStatus(str(e))
 
  def pageRefreshData(self):
