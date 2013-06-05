@@ -852,10 +852,10 @@ jsRoot points to the root class of js
 
  def onStateChange(self,e):
   """Ignore the first onStateChange called on the about:blank document"""
-  old=self.dom.document.ref.id
-  self.dom.document.ref.jsrefresh()
-  if self.dom.document.ref.id!=old:
-   return
+#  old=self.dom.document.ref.id
+#  self.dom.document.ref.jsrefresh()
+#  if self.dom.document.ref.id!=old:
+#   return
   self.events.append(e)
 #  self.setStatus("event onStateChange")
 #  self.page.linkedBrowser.ref.jsrefresh()
