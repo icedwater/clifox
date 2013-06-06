@@ -517,11 +517,13 @@ class gui(forms):
 #basically, if there are nodes with text on our same line, and as above, we're on an element needing a new line, then we supply one. This means that we won't put a new line in unless there is already text on this line, so we won't be inserting multiple blank lines for ending elements and starting new ones.
 #for all nodes whose starting position is on the same line as the current node, before this node in the nodes list, and whose text is not blank or whitespace
 #   log("elem:",i,type(n),self.textOnSameLine(nodes))
+#i not in ("BR","P") and \
    if i in self.newLineElements and \
-i not in ("BR","P") and \
 type(n)!=tuple and \
 self.textOnSameLine(nodes):
     self.y+=1; self.x=0; self._display[n].append((1,self.y,self.x,''))
+#add second blank line for paragraphs
+    if i=="P": self.y+=1; self.x=0; self._display[n].append((1,self.y,self.x,''))
    formatOnly,text=self.getElementText(n)
    if text==None: text=''
    if type(text)==int: text=str(text)
