@@ -6,14 +6,22 @@ are necessary in addition to any required python packages.
 Please modify install.sh, and change the ftp path to fit your system architecture.
 
 Run the file ./install.sh in the root directory of this code.
-When this file finishes, you should have a "ff" directory in the root of your source directory.
+When this file finishes, you should have a "ff" directory
+in the root of your source directory.
+
 To run clifox, do:
-xvfb ./ff/firefox/firefox
+xvfb ./ff/firefox/firefox &
+xvfb runs firefox as a subprocess, and keeps it's own window open.
+Therefore, you will want to run xvfb in it's own window,
+or as a background task.
+When finished browsing, or to shutdown firefox entirely, you can `killall firefox`,
+or run `fg` and control-c to end the firefox process.
 You can either run this with nohup, or in a second console or vtty.
 To run clifox itself, do:
 ./clifox
 or for a webpage:
 ./clifox 'protocol://host/path'
+
 Key bindings can be found in ~/.clifox/clifox.conf.
 Logs are in ~/.clifox/clifox.log.
 
