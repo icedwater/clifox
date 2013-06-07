@@ -803,7 +803,6 @@ jsRoot points to the root class of js
   self.windowVars={}
   self.windex=-1
   self.screen = screen
-  curses.def_shell_mode()
   self.screen.nodelay(1)
   self.screen.keypad(1)
   curses.raw(1)
