@@ -475,7 +475,7 @@ if ((aStateFlags & Components.interfaces.nsIWebProgressListener.STATE_STOP) && (
 {
 //repl.print({"m":"w","a":["onStatusChange2"]});
 try{
-var o={"aWebProgress":aWebProgress,"aRequest":aRequest,"aStateFlags":aStateFlags,"aStatus":aStatus};
+var o={"aWebProgress":aWebProgress,"aRequest":aRequest,"aStateFlags":aStateFlags,"aStatus":aStatus,"uri":aWebProgress.DOMWindow.location.href};
 var oid=repl.justAddMap(o);
 repl.print({"m":"E","a":[oid],"t":"onStateChange"});
 }catch(e){
