@@ -70,7 +70,8 @@ class treeview(object):
    self.states[i]=0
    self.l("collapsed:"+str(i)+" list:"+str(self.list))
   else:
-   while self.states[self.cur]==0:
+   level=self.levels[self.cur]
+   while self.states[self.cur]==0 or self.levels[self.cur]>=level:
     ret=self.up(show=0)
     if ret==1:
      break
