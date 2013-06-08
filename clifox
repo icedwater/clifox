@@ -131,11 +131,16 @@ class forms(object):
    pass
   return ret
 
- def gTree(self,params):
+ def gTree(self,params,**kw):
   self.save()
-  g=guiTree.nodeTreeview(params)
-  g(self.screen)
+  if "treeview" in kw:
+   tvType=kw.pop("treeview")
+   g=getattr(guiTree,tvType)(params,**kw)
+  else:
+   g=guiTree.nodeTreeview(params)
+  x=g(self.screen)
   self.restore()
+  return x
 
  def gCheckbox(self,**kw):
   kw['screen']=self.screen
@@ -572,6 +577,28 @@ self.textOnSameLine(nodes):
 #    fh.write(str(j)+"\n")
   fh.write("\n")
   fh.close()
+
+ def gotoBookmark(self):
+  url=self.showBookmarks()
+  if url==None:
+   return self.setStatus("Canceled. No bookmark selected.")
+  self.dom.location.href=url
+  return self.setStatus("Opening:"+str(url))
+
+
+ def showBookmarks(self):
+  inhs=self.js.Components.interfaces.nsINavHistoryService
+  historyService=self.js.Components.classes["@mozilla.org/browser/nav-history-service;1"].getService(inhs)
+  hOps=historyService.getNewQueryOptions()
+  hQuery=historyService.getNewQuery()
+  inbs=self.js.Components.interfaces.nsINavBookmarksService
+  bookmarksService=self.js.Components.classes["@mozilla.org/browser/nav-bookmarks-service;1"].getService(inbs)
+  bsFolder=bookmarksService.placesRoot
+  hQuery.setFolders([bsFolder], 1)
+  result=historyService.executeQuery(hQuery,hOps)
+  rootNode=result.root
+  return self.gTree([("/",rootNode)],js=self.js,treeview="bookmarkTree")
+#  return rootNode
 
  def showScreen(self,screenNum=None,y=None,absoluteY=None,x=None,force=0):
 #  if self.dom.document._display==self.dom.document.childNodes[0]._display: log("displays still the same")
