@@ -5,11 +5,11 @@ import os,os.path,sys,curses,time
 class treeview(object):
  space=" "*200
 #uncomment the below open statement and comment the below return statement to enable logging again
- log=open("/tmp/tree","wb")
+# log=open("/tmp/tree","wb")
  def l(self,*a):
-#  return
-  [self.log.write(str(i)+"\n") for i in a]
-  self.log.flush()
+  return
+#  [self.log.write(str(i)+"\n") for i in a]
+#  self.log.flush()
 
  def __init__(self,nodes):
   self.screen=None
