@@ -7,7 +7,7 @@ try:
 except:
  print("Either the JSON or simplejson module needs to be installed. Data is passed from Firefox to Python using the JSON format.")
  sys.exit(1)
-dbg=0
+dbg=2
 dbgl=[]
 from utils import log
 true=True
@@ -25,6 +25,9 @@ class JSClass(object):
 
  def __len__(self):
   return self.length
+
+ def __nonzero__(self):
+  return 1
 
  def __hash__(self):
   return self.ref.idh
@@ -478,6 +481,14 @@ try{
 var o={"aWebProgress":aWebProgress,"aRequest":aRequest,"aStateFlags":aStateFlags,"aStatus":aStatus,"uri":aWebProgress.DOMWindow.location.href};
 var oid=repl.justAddMap(o);
 repl.print({"m":"E","a":[oid],"t":"onStateChange"});
+}catch(e){
+repl.print({"m":"t","a":[e.toString()]});
+};
+} else {
+try{
+var o={"aWebProgress":aWebProgress,"aRequest":aRequest,"aStateFlags":aStateFlags,"aStatus":aStatus,"uri":aWebProgress.DOMWindow.location.href};
+var oid=repl.justAddMap(o);
+repl.print({"m":"E","a":[oid],"t":"onStateChangeAll"});
 }catch(e){
 repl.print({"m":"t","a":[e.toString()]});
 };
