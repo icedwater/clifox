@@ -328,7 +328,7 @@ p=p.parentNode;
 }
 return l;
 };
-Array.prototype.indexOf=(function(obj){var idx=this.length;do{if(this[i]==obj){return i;};idx--;} while(idx>=0);return -1;});
+Array.prototype.indexOf=(function(obj){var idx=this.length;do{if(this[idx]==obj){return idx;};idx--;} while(idx>=0);return -1;});
 repl.getDomList=function(root,endings)
 {
 var n,l,i;
