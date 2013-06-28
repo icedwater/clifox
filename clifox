@@ -372,6 +372,25 @@ class gui(forms):
 #  return text
 # len([j for j in nodes[:self.nidx] if type(j)!=tuple and self.y in [k[0] for k in j._display] and j._nodeText]):
   
+ def getAcc(self,root):
+  ret=[]
+  lv=0
+  self.js.tmp=root
+  res=self.js.ref.eval('repl.accView(tmp)')[0]
+  log("res:",res)
+  ii=-1
+  jm=self.js.ref.map
+  jr=self.js.ref.rMap
+  for i in res:
+   ii+=1
+   vars={"text":i[-1],"level":i[1],"role":i[2],"states":i[3]}
+   id=i[0]
+   jc=mozCom.JSClass(root=self.js,name=str(ii),id=id,vars=vars)
+   jm[id]=jc
+   jr[(id,ii)]=jc
+   ret.append(jc)
+  return ret
+
  def iterNodes(self,root,endings=0):
   self.js.tmp=root
   lc=[]

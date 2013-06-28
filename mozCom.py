@@ -575,6 +575,117 @@ obs.addObserver(repl.windowGuiKiller, "dom-window-destroyed", false);
 //content-document-global-created", false);
 repl.killers.push([repl.windowGuiKiller,repl.windowGuiKiller.kill]);
 
+repl.accView=function(aDocument)
+{
+function getAccessibleDoc(doc)
+{
+this.ar=Components.classes["@mozilla.org/accessibleRetrieval;1"].getService(Components.interfaces.nsIAccessibleRetrieval);
+this.ad=this.ar.getAccessibleFor(aDocument);
+return ad;
+}
+function getStates(aNode)
+{
+var d,e,ss,ret;
+d={};
+e={};
+ret=[];
+aNode.getState(d,e);
+ss=this.ar.getStringStates(d.value,e.value);
+for(var i=0;i<ss.length;i++)
+{
+ret.push(ss.item(i));
+}
+return ret;
+}
+function visit(aNode,l)
+{
+l.push(aNode);
+var e=aNode.children.enumerate();
+while(e.hasMoreElements())
+{
+visit(e.getNext(),l);
+l.push(-1);
+};
+};
+function getAccessibleTree(aNode,l)
+{
+var n,ns,i,root,num;
+num=0;
+root=aNode;
+i=0;
+n=aNode;
+while (n && (i==0||n!=root))
+{
+i+=1;
+l.push([n,num]);
+try{
+if(n.firstChild)
+{
+n=n.firstChild;
+num+=1;
+continue;
+}
+if(n.nextSibling)
+{
+n=n.nextSibling;
+continue;
+}
+}
+catch(e)
+{
+}
+while(n!=root)
+{
+try{
+ns=n.nextSibling;
+}
+catch(e)
+{
+ns=null;
+}
+if(n && !ns)
+{
+n=n.parent;
+num-=1;
+}
+else
+{
+break;
+}
+}
+n=n.nextSibling;
+}
+return l;
+}
+function serialize(aList,ret)
+{
+var i;
+for(i=0;i<aList.length;i++)
+{
+var n,role,states,text,num;
+n=aList[i];
+num=n[1];
+n=n[0];
+role=this.ar.getStringRole(n.role);
+states=getStates(n);
+if(role=="document"||role=="text leaf"||role=="statictext")
+{
+text=n.name;
+} else {
+text="";
+}
+ret.push([repl.justAddMap(n),num,role,states,text]);
+}
+}
+var aDoc,l,ret;
+l=[];
+ret=[];
+aDoc=getAccessibleDoc(document);
+//visit(aDoc,l);
+getAccessibleTree(aDoc,l);
+serialize(l,ret);
+return ret;
+}
 repl.getDocJson=function(root,end)
 {
 grabVars={
