@@ -331,7 +331,7 @@ p=p.parentNode;
 }
 return l;
 };
-Array.prototype.indexOf=(function(obj){var idx=this.length;do{if(this[i]==obj){return i;};idx--;} while(idx>=0);return -1;});
+Array.prototype.indexOf=(function(obj){var idx=this.length;do{if(this[idx]==obj){return idx;};idx--;} while(idx>=0);return -1;});
 repl.getDomList=function(root,endings)
 {
 var n,l,i;
@@ -618,13 +618,19 @@ while (n && (i==0||n!=root))
 {
 i+=1;
 l.push([n,num]);
-try{
+try
+{
 if(n.firstChild)
 {
 n=n.firstChild;
 num+=1;
 continue;
 }
+} catch(e)
+{
+}
+try
+{
 if(n.nextSibling)
 {
 n=n.nextSibling;
@@ -643,17 +649,16 @@ catch(e)
 {
 ns=null;
 }
-if(n && !ns)
+if (ns)
 {
+n=ns;
+break;
+} else {
 n=n.parent;
 num-=1;
 }
-else
-{
-break;
 }
-}
-n=n.nextSibling;
+//n=n.nextSibling;
 }
 return l;
 }
@@ -668,7 +673,7 @@ num=n[1];
 n=n[0];
 role=this.ar.getStringRole(n.role);
 states=getStates(n);
-if(role=="document"||role=="text leaf"||role=="statictext")
+if(role=="document"||role=="text leaf"||role=="statictext"||role=="text container"||!n.childCount)
 {
 text=n.name;
 } else {
