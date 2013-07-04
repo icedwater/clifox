@@ -583,7 +583,7 @@ repl.accView=function(aDocument)
 function getAccessibleDoc(doc)
 {
 this.ar=Components.classes["@mozilla.org/accessibleRetrieval;1"].getService(Components.interfaces.nsIAccessibleRetrieval);
-this.ad=this.ar.getAccessibleFor(aDocument);
+this.ad=this.ar.getAccessibleFor(doc);
 return ad;
 }
 function getStates(aNode)
@@ -688,7 +688,7 @@ ret.push([repl.justAddMap(n),num,role,states,text]);
 var aDoc,l,ret;
 l=[];
 ret=[];
-aDoc=getAccessibleDoc(document);
+aDoc=getAccessibleDoc(aDocument);
 //visit(aDoc,l);
 getAccessibleTree(aDoc,l);
 serialize(l,ret);

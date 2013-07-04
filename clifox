@@ -156,13 +156,13 @@ class parser(object):
    ret+="["+text+"]"
   t=[i for i in children if i.text]
   if not g and not t:
-   ret+=i.value
+   ret+=self.lst[idx].value
   ret+="} "
   tt="".join([i.text for i in t if i.num==self.lst[idx].num+1 and "text" in i.role])
   if not tt:
-   tt=i.name
+   tt=self.lst[idx].name
   if not tt:
-   tt=i.value
+   tt=self.lst[idx].value
   ret+=tt
   if not self.atLineStart(idx):
    ret="\n"+ret
@@ -188,7 +188,7 @@ class parser(object):
 
  def listitem(self,idx):
   t="* "
-  if not self.atLineStart: t="\n"+t
+  if not self.atLineStart(idx): t="\n"+t
   return t,self.SKIP_THIS
 
  def textLeaf(self,idx):
@@ -1093,11 +1093,11 @@ jsRoot points to the root class of js
   self.screen.keypad(1)
   curses.raw(1)
   curses.noecho()
+  self.page=None
   self.initVars()
   self.run()
 
  def initVars(self):
-  self.page=None
   self.maxy,self.maxx=self.screen.getmaxyx()
   self.curPos=[0,0]
   self.status=self.maxy-1
@@ -1794,7 +1794,7 @@ length: the maximum length for this text entry (element.attr=maxlength is the co
   self.screen.refresh()
 
  def saveWindow(self):
-  if hasattr(self,"page"):
+  if self.page:
    p=self.page
    self.windowVars[p]={}
    d=self.windowVars[p]
@@ -1811,22 +1811,23 @@ length: the maximum length for this text entry (element.attr=maxlength is the co
   except:
    self.setStatus("No document object to display")
    return
+  force=0
   if w in self.windowVars:
    [setattr(self,k,v) for k,v in self.windowVars[w].items() if k in self.local_vars]
-   if not (self._display and self.nodes):
-    self.doPaint()
   else:
    self.initVars()
-   self.doPaint()
+   force=1
+  self.doPaint(force)
 
- def doPaint(self):
+ def doPaint(self,paint=0):
   a=time.time()
-  try:
-   self.paintScreen()
-  except Exception,e:
-#   self.screen.clear()
-#~@
-   self.setStatus(e)
+  if paint:
+   try:
+    self.paintScreen()
+   except Exception,e:
+    self.setStatus(e)
+  else:
+   log("painted from cache")
   b=time.time()
   self.p=parser(self.getAcc(self.dom.document))
   self.p.parse()
@@ -1879,7 +1880,6 @@ length: the maximum length for this text entry (element.attr=maxlength is the co
   p=self.js.gBrowser.visibleTabs[id]
   self.js.gBrowser.selectedTab=p
   log("selectedTab set")
-
 
  def handleLocalKey(self,k,*args):
   if k in self.keys:
