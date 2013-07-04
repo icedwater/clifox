@@ -334,17 +334,19 @@ return l;
 Array.prototype.indexOf=(function(obj){var idx=this.length;do{if(this[idx]==obj){return idx;};idx--;} while(idx>=0);return -1;});
 repl.getDomList=function(root,endings)
 {
-var n,l,i;
+var n,l,i,num;
+num=0;
 l=[];
 n=root;
 i=0;
 while (n && (i==0 || n!=root))
 {
 i+=1;
-l.push(n);
-if (n.hasChildNodes())
+l.push([n,num]);
+if (n.firstChild)
 {
 n=n.firstChild;
+num+=1;
 continue;
 }
 if (n.nextSibling)
@@ -355,6 +357,7 @@ continue;
 while (n && !n.nextSibling)
 {
 n=n.parentNode;
+num-=1;
 //if (endings && n){
 //l.push([0,n]);
 //}
@@ -700,16 +703,13 @@ grabVars={
 "OPTION":["textContent"],
 "IMG":["alt","src"]
 }
-function getNode(n,addToMap,endNode)
+function getNode(x,func)
 {
-var a,at,al,j,i;
+var a,at,al,j,i,n,num;
+num=x[1];
+n=x[0];
 a=[];
-a.push(endNode?1:0);
-a.push(addToMap(n));
-if (endNode)
-{
-return a;
-};
+a.push(func(n));
 a.push(n.nodeName);
 a.push(n.nodeValue);
 a.push(n.nodeType);
@@ -723,17 +723,7 @@ for (var i=0;i<gvl;i++)
 a.push(gv[i]);
 a.push(n[gv[i]]);
 }
-} else {
-at=n.attributes;
-if(at)
-{
-al=at.length;
-for(j=0;j<al;j++)
-{
-a.push(at[j].nodeName);
-a.push(at[j].nodeValue);
-};
-};
+}
 }
 return a;
 };
@@ -748,36 +738,13 @@ func=repl.justAddMap;
 var atime,w,l,cur,ll;
 l=[];
 atime=repl.time();
-w=this.getDomList(root,end);
+w=this.getDomList(root);
 ll=w.length;
 for(var i=0;i<ll;i++)
 {
 var t=w[i];
-if (t[0]===0 && t[1])
-{
-l.push(getNode(t[1],repl.inMap,1));
-} else {
-var z;
-if (t===root)
-{
-z=getNode(t,repl.addMap,0);
-} else {
-z=getNode(t,func,0);
+l.push(getNode(t,func));
 }
-zl=z.length;
-if(1==0)
-{
-for (var j=2;j<zl;j++)
-{
-if (typeof(z[j])=='string')
-{
-z[j]=encodeURIComponent(z[j]);
-}
-}
-}
-l.push(z);
-}
-};
 //l.push(repl.time()-atime);
 repl.print({"m":"w","a":["docSerializationTime",repl.time()-atime]});
 return l;

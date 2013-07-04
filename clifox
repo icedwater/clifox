@@ -578,46 +578,42 @@ class gui(forms):
    ret.append(jc)
   return ret
 
- def iterNodes(self,root,endings=0):
+ def iterNodes(self,root):
   self.js.tmp=root
   lc=[]
-  res=self.js.ref.eval("repl.getDocJson(tmp,%d)" % (int(endings),))[0]
+  res=self.js.ref.eval("repl.getDocJson(tmp)")[0]
   ii=-1
   jm=self.js.ref.map
   jr=self.js.ref.rMap
   for o in res:
    ii+=1
-   end,i=o[:2]
-#   log(end,i)
-   if i in jm:
-#    log(id,"in jm,end==",end)
-    if end==1:
-     lc.append((0,jm[i]))
-    else:
-     lc.append(jm[i])
-    continue
-#   log("end:",end)
-   if end==0:
-#    o[2:]=[urllib.unquote(j) if type(j)==str else j for j in o[2:]]
-    nn,v,t,pn=o[2:6]
-    nn=nn.upper() if nn[0]!="#" else nn
-#    log("pn:",jm.get(pn,"NoKey %s in dict" % (repr(pn),)))
-#    log(id,"new node")
-    v={"nodeName":nn,"tagName":nn,"nodeValue":v,"nodeType":t,"parentNode":jm[pn],"_flags_skip":0}
-    v.update([(o[j],o[j+1]) for j in xrange(6,len(o),2) if o[j] not in v])
-#    log("v:",v)
-    jc=mozCom.JSClass(root=self.js,name=str(ii),id=i,vars=v)
-#{"tagName":nn,"nodeName":nn,"nodeValue":v,"nodeType":t,"parentNode":jm.get(pn,pn),"_flags_skip":0})
-#    log("vars2:",repr(jc),jc.ref.vars)
-    jm[i]=jc
-    jr[(i,ii)]=jc
+   if o in jm:
+    lc.append(jm[o])
    else:
-#    log(i,"ending node, attempting dict lookup")
-    jc=(0,jm[i])
-   lc.append(jc)
+    id,nn,v,t,pn=o[2:6]
+    nn=nn.upper() if nn[0]!="#" else nn
+    v={"num":o[1],"nodeName":nn,"tagName":nn,"nodeValue":v,"nodeType":t,"parentNode":jm[pn],"_flags_skip":0}
+    v.update([(o[j],o[j+1]) for j in xrange(6,len(o),2) if o[j] not in v])
+    jc=mozCom.JSClass(root=self.js,name=str(ii),id=id,vars=v)
+    jm[id]=jc
+    jr[(o,ii)]=jc
   return lc
 
  def makeClosings(self,nodes):
+  l=[]
+  open=[]
+  idx=-1
+  for i in nodes:
+   idx+=1
+   if idx>0 and l[-1].num>=i.num:
+    rng=(l[-1].num-i.num)+1
+    clos=[open.pop(j) for j in range(rng)]
+    [l.append((0,j)) for j in clos]
+   open.append(i)
+   [l.append((0,open.pop(-1))) for j in range(len(open))]
+  return l
+
+ def _makeClosings(self,nodes):
 #  log("makeclosings")
   openNodes=[]
   ol={}
@@ -669,7 +665,7 @@ class gui(forms):
     self.dom.document.ref.vars[k]=None
   self.dom.document.ref.vars['parentNode']=None
   try:
-   nodes=self.iterNodes(self.dom.document,1)
+   nodes=self.iterNodes(self.dom.document)
    nodes=self.makeClosings(nodes)
    self.nodes=nodes
    self.nodes_flat=[i for i in nodes if type(i)!=tuple]
