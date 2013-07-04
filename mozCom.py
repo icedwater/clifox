@@ -710,6 +710,7 @@ num=x[1];
 n=x[0];
 a=[];
 a.push(func(n));
+a.push(num);
 a.push(n.nodeName);
 a.push(n.nodeValue);
 a.push(n.nodeType);
@@ -722,7 +723,6 @@ for (var i=0;i<gvl;i++)
 {
 a.push(gv[i]);
 a.push(n[gv[i]]);
-}
 }
 }
 return a;

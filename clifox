@@ -366,14 +366,18 @@ class gui(forms):
  ignoreElements=set("OPTION,NOSCRIPT,SCRIPT,STYLE".split(","))
 
  def getNextNonChildNode(self,n,inList=None):
-  try:
-   idx=self.nodes.index((0,n))+1
-  except:
-   log("err:Node not found:",n.outerHTML,"nodesLen",len(self.nodes))
-   return None
-  while idx+1<len(self.nodes) and type(self.nodes[idx])==tuple:
-   idx+=1
-  return idx if not inList else inList.index(self.nodes[idx])
+  l=inList
+  if (0,n) in l:
+   return l.index((0,n))
+  i=l.index(n)
+  snum=n.num
+  while i+1<len(l):
+   i+=1
+   if type(l[i])==tuple:
+    continue
+   if l[i].num<=snum:
+    return i
+  return None
 
  ws=[chr(i) for i in xrange(1,255)]
 #string.whitespace+string.printable
@@ -587,16 +591,17 @@ class gui(forms):
   jr=self.js.ref.rMap
   for o in res:
    ii+=1
-   if o in jm:
-    lc.append(jm[o])
+   if o[0] in jm:
+    lc.append(jm[o[0]])
    else:
-    id,nn,v,t,pn=o[2:6]
+    id,num,nn,v,t,pn=o[:6]
     nn=nn.upper() if nn[0]!="#" else nn
-    v={"num":o[1],"nodeName":nn,"tagName":nn,"nodeValue":v,"nodeType":t,"parentNode":jm[pn],"_flags_skip":0}
+    v={"num":num,"nodeName":nn,"tagName":nn,"nodeValue":v,"nodeType":t,"parentNode":jm.get(pn,None),"_flags_skip":0}
     v.update([(o[j],o[j+1]) for j in xrange(6,len(o),2) if o[j] not in v])
     jc=mozCom.JSClass(root=self.js,name=str(ii),id=id,vars=v)
     jm[id]=jc
-    jr[(o,ii)]=jc
+    jr[(id,ii)]=jc
+    lc.append(jc)
   return lc
 
  def makeClosings(self,nodes):
@@ -605,12 +610,14 @@ class gui(forms):
   idx=-1
   for i in nodes:
    idx+=1
-   if idx>0 and l[-1].num>=i.num:
-    rng=(l[-1].num-i.num)+1
-    clos=[open.pop(j) for j in range(rng)]
+   if idx and i.num<=nodes[idx-1].num:
+    rng=(nodes[idx-1].num-i.num)+1
+    clos=[open.pop(-1) for j in xrange(rng)]
     [l.append((0,j)) for j in clos]
    open.append(i)
-   [l.append((0,open.pop(-1))) for j in range(len(open))]
+   l.append(i)
+  log("remainderOpen:",open)
+  [l.append((0,j)) for j in open[::-1]]
   return l
 
  def _makeClosings(self,nodes):
@@ -1919,8 +1926,8 @@ length: the maximum length for this text entry (element.attr=maxlength is the co
    if getattr(self,"start_url","")!=None:
     self.newWindow(getattr(self,"start_url",config.get("homepage","http://bmcginty.hopto.org/form.html")))
    else:
+    self.moveWindow(id=0)
     self.restoreWindow(self.js.gBrowser.visibleTabs[0])
-#self.moveWindow(id=0)
   while 1:
    time.sleep(0.01)
    self.js.ref.recv(0.01)
