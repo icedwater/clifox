@@ -836,7 +836,7 @@ self.textOnSameLine(nodes):
      continue
     if nY>absoluteY+self.maxy:
      break
-    log("draw",nY-absoluteY,nX,t)
+#    log("draw",nY-absoluteY,nX,t)
     self.screen.addstr(nY-absoluteY,nX,t)
   self.screenPos,self.screenPosX=y,x
   self.screenNum=screenNum
@@ -1814,6 +1814,12 @@ length: the maximum length for this text entry (element.attr=maxlength is the co
    force=1
   self.doPaint(force)
 
+ def doAccPaint(self):
+  self.p=parser(self.getAcc(self.dom.document))
+  self.p.parse()
+  c=time.time()
+  log("accessiblePainted, time %s" % (str(c-b),))
+
  def doPaint(self,paint=0):
   a=time.time()
   if paint:
@@ -1824,10 +1830,8 @@ length: the maximum length for this text entry (element.attr=maxlength is the co
   else:
    log("painted from cache")
   b=time.time()
-  self.p=parser(self.getAcc(self.dom.document))
-  self.p.parse()
-  c=time.time()
-  log("painted, time %s.\naccessiblePainted, time %s" % (str(b-a),str(c-b),))
+#self.doAccPaint()
+  log("painted, time %s." % (str(b-a),))
   self.showScreen(force=1)
 
  def execCode(self):

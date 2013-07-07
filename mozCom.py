@@ -7,7 +7,7 @@ try:
 except:
  print("Either the JSON or simplejson module needs to be installed. Data is passed from Firefox to Python using the JSON format.")
  sys.exit(1)
-dbg=2
+dbg=0
 dbgl=[]
 from utils import log
 true=True
