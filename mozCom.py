@@ -7,7 +7,7 @@ try:
 except:
  print("Either the JSON or simplejson module needs to be installed. Data is passed from Firefox to Python using the JSON format.")
  sys.exit(1)
-dbg=0
+dbg=2
 dbgl=[]
 from utils import log
 true=True
@@ -25,6 +25,9 @@ class JSClass(object):
 
  def __len__(self):
   return self.length
+
+ def __nonzero__(self):
+  return 1
 
  def __hash__(self):
   return self.ref.idh
@@ -331,17 +334,19 @@ return l;
 Array.prototype.indexOf=(function(obj){var idx=this.length;do{if(this[idx]==obj){return idx;};idx--;} while(idx>=0);return -1;});
 repl.getDomList=function(root,endings)
 {
-var n,l,i;
+var n,l,i,num;
+num=0;
 l=[];
 n=root;
 i=0;
 while (n && (i==0 || n!=root))
 {
 i+=1;
-l.push(n);
-if (n.hasChildNodes())
+l.push([n,num]);
+if (n.firstChild)
 {
 n=n.firstChild;
+num+=1;
 continue;
 }
 if (n.nextSibling)
@@ -352,6 +357,7 @@ continue;
 while (n && !n.nextSibling)
 {
 n=n.parentNode;
+num-=1;
 //if (endings && n){
 //l.push([0,n]);
 //}
@@ -481,6 +487,14 @@ repl.print({"m":"E","a":[oid],"t":"onStateChange"});
 }catch(e){
 repl.print({"m":"t","a":[e.toString()]});
 };
+} else {
+try{
+var o={"aWebProgress":aWebProgress,"aRequest":aRequest,"aStateFlags":aStateFlags,"aStatus":aStatus,"uri":aWebProgress.DOMWindow.location.href};
+var oid=repl.justAddMap(o);
+repl.print({"m":"E","a":[oid],"t":"onStateChangeAll"});
+}catch(e){
+repl.print({"m":"t","a":[e.toString()]});
+};
 }
 },
 
@@ -564,6 +578,122 @@ obs.addObserver(repl.windowGuiKiller, "dom-window-destroyed", false);
 //content-document-global-created", false);
 repl.killers.push([repl.windowGuiKiller,repl.windowGuiKiller.kill]);
 
+repl.accView=function(aDocument)
+{
+function getAccessibleDoc(doc)
+{
+this.ar=Components.classes["@mozilla.org/accessibleRetrieval;1"].getService(Components.interfaces.nsIAccessibleRetrieval);
+this.ad=this.ar.getAccessibleFor(doc);
+return ad;
+}
+function getStates(aNode)
+{
+var d,e,ss,ret;
+d={};
+e={};
+ret=[];
+aNode.getState(d,e);
+ss=this.ar.getStringStates(d.value,e.value);
+for(var i=0;i<ss.length;i++)
+{
+ret.push(ss.item(i));
+}
+return ret;
+}
+function visit(aNode,l)
+{
+l.push(aNode);
+var e=aNode.children.enumerate();
+while(e.hasMoreElements())
+{
+visit(e.getNext(),l);
+l.push(-1);
+};
+};
+function getAccessibleTree(aNode,l)
+{
+var n,ns,i,root,num;
+num=0;
+root=aNode;
+i=0;
+n=aNode;
+while (n && (i==0||n!=root))
+{
+i+=1;
+l.push([n,num]);
+try
+{
+if(n.firstChild)
+{
+n=n.firstChild;
+num+=1;
+continue;
+}
+} catch(e)
+{
+}
+try
+{
+if(n.nextSibling)
+{
+n=n.nextSibling;
+continue;
+}
+}
+catch(e)
+{
+}
+while(n!=root)
+{
+try{
+ns=n.nextSibling;
+}
+catch(e)
+{
+ns=null;
+}
+if (ns)
+{
+n=ns;
+break;
+} else {
+n=n.parent;
+num-=1;
+}
+}
+//n=n.nextSibling;
+}
+return l;
+}
+function serialize(aList,ret)
+{
+var i;
+for(i=0;i<aList.length;i++)
+{
+var n,role,states,text,num;
+n=aList[i];
+num=n[1];
+n=n[0];
+role=this.ar.getStringRole(n.role);
+states=getStates(n);
+if(role=="document"||role=="text leaf"||role=="statictext"||role=="text container"||!n.childCount)
+{
+text=n.name;
+} else {
+text="";
+}
+ret.push([repl.justAddMap(n),num,role,states,text]);
+}
+}
+var aDoc,l,ret;
+l=[];
+ret=[];
+aDoc=getAccessibleDoc(aDocument);
+//visit(aDoc,l);
+getAccessibleTree(aDoc,l);
+serialize(l,ret);
+return ret;
+}
 repl.getDocJson=function(root,end)
 {
 grabVars={
@@ -573,16 +703,14 @@ grabVars={
 "OPTION":["textContent"],
 "IMG":["alt","src"]
 }
-function getNode(n,addToMap,endNode)
+function getNode(x,func)
 {
-var a,at,al,j,i;
+var a,at,al,j,i,n,num;
+num=x[1];
+n=x[0];
 a=[];
-a.push(endNode?1:0);
-a.push(addToMap(n));
-if (endNode)
-{
-return a;
-};
+a.push(func(n));
+a.push(num);
 a.push(n.nodeName);
 a.push(n.nodeValue);
 a.push(n.nodeType);
@@ -596,17 +724,6 @@ for (var i=0;i<gvl;i++)
 a.push(gv[i]);
 a.push(n[gv[i]]);
 }
-} else {
-at=n.attributes;
-if(at)
-{
-al=at.length;
-for(j=0;j<al;j++)
-{
-a.push(at[j].nodeName);
-a.push(at[j].nodeValue);
-};
-};
 }
 return a;
 };
@@ -621,36 +738,13 @@ func=repl.justAddMap;
 var atime,w,l,cur,ll;
 l=[];
 atime=repl.time();
-w=this.getDomList(root,end);
+w=this.getDomList(root);
 ll=w.length;
 for(var i=0;i<ll;i++)
 {
 var t=w[i];
-if (t[0]===0 && t[1])
-{
-l.push(getNode(t[1],repl.inMap,1));
-} else {
-var z;
-if (t===root)
-{
-z=getNode(t,repl.addMap,0);
-} else {
-z=getNode(t,func,0);
+l.push(getNode(t,func));
 }
-zl=z.length;
-if(1==0)
-{
-for (var j=2;j<zl;j++)
-{
-if (typeof(z[j])=='string')
-{
-z[j]=encodeURIComponent(z[j]);
-}
-}
-}
-l.push(z);
-}
-};
 //l.push(repl.time()-atime);
 repl.print({"m":"w","a":["docSerializationTime",repl.time()-atime]});
 return l;
