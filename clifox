@@ -146,6 +146,8 @@ class parser(object):
   t=t if t else ''
   return t,self.SKIP_THIS
 
+# insureNewLine=[link,heading,listitem,graphic,pushButton,checkButton,entry]
+
  def link(self,idx):
   ret="{"
   children=self.getChildren(idx)
@@ -164,8 +166,6 @@ class parser(object):
   if not tt:
    tt=self.lst[idx].value
   ret+=tt
-  if not self.atLineStart(idx):
-   ret="\n"+ret
   return ret,self.SKIP_CHILDREN
 
  def atLineStart(self,idx):
@@ -183,12 +183,11 @@ class parser(object):
   return '',self.SKIP_THIS
 
  def heading(self,idx):
-  t='\n' if not self.atLineStart(idx) else ''
+  t=''
   return t,self.SKIP_THIS
 
  def listitem(self,idx):
   t="* "
-  if not self.atLineStart(idx): t="\n"+t
   return t,self.SKIP_THIS
 
  def textLeaf(self,idx):
@@ -201,8 +200,6 @@ class parser(object):
   if not text:
    text=self.lst[idx].value
   ret="[img] "+text
-  if not self.atLineStart(idx):
-   ret="\n"+ret
   return ret,self.SKIP_CHILDREN
 
  def document(self,idx):
@@ -213,8 +210,6 @@ class parser(object):
  def pushbutton(self,idx):
   text="".join([i.text for i in self.getChildren(idx) if "text" in i.role])
   ret="[btn] "+text
-  if not self.atLineStart(idx):
-   ret="\n"+ret
 #  if not self.atLineEnd(idx):
 #   ret+="\n"
   return ret,self.SKIP_CHILDREN
