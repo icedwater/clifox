@@ -407,6 +407,8 @@ class gui(forms):
    elif n.textContent!="":
 #[i for i in self.nodes_flat if i.parentNode==n] and n.textContent!="":
     return 1,"{} "
+   elif n.name:
+    return 1,''
    elif n.href:
     return 1,"{%s}" % (n.href,)
    else:
@@ -414,12 +416,12 @@ class gui(forms):
   elif t in self.formElements:
    if t=="INPUT" and n.type and n.type.lower()=="hidden":
     return 1,None
-   if n.value:
-    v=n.value
-    if n.type and n.type.lower()=="password":
-     v="*"*len(v)
-   if n.checked!=None:
+   if str(n.type).lower()=="checkbox":
     v="x" if n.checked else " "
+   elif n.value:
+    v=n.value
+    if str(n.type).lower()=="password":
+     v="*"*len(v)
    else:
     v=""
    if n.type and n.type.lower() in ("submit","image"):
