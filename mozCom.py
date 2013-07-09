@@ -761,8 +761,8 @@ skip=-1;
 }
 var cst,tt;
 tt=w[i][0];
-if(tt.offsetWidth==0&&tt.offsetHeight==0)
-{
+//if(tt.offsetWidth==0&&tt.offsetHeight==0)
+//{
 try{cst=cs(tt);}catch(e){cst=null;};
 //cst=null;
 //var elems=["LI","UL"];
@@ -771,7 +771,7 @@ if (cst&&(cst.visibility=='hidden'||cst.display=='none'))
 skip=w[i][1];
 continue;
 }
-}
+//}
 ww.push(w[i]);
 }
 ll=ww.length;
