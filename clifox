@@ -1524,10 +1524,10 @@ length: the maximum length for this text entry (element.attr=maxlength is the co
    log("execute:linkFound:",d)
    while d.nodeName!="A":
     d=d.parentNode
-  if (d.nodeName=="INPUT" and d.hasAttribute("type") and d.getAttribute("type") in ("button","reset","submit","image")) or (d.nodeName=="BUTTON"):
+  if (d.nodeName=="INPUT" and str(d.type).lower() in ("button","reset","submit","image")) or (d.nodeName=="BUTTON"):
 #   d.click()
 #   if d.form.evt_submit():
-   return d.click()
+   return self.doClick(d)
   if self.formElements.intersection(self.parentNodeNames(d)):
    while d!=None and d.nodeName in self.formElements:
     d=d.parentNode
@@ -1546,9 +1546,15 @@ length: the maximum length for this text entry (element.attr=maxlength is the co
   if d.nodeName=="A":
    url=d.href
    log("execute: "+url)
-   d.click()
+   return self.doClick(d)
 #   self.dom.location.href=url
-   return
+#   return
+  return self.doClick(d)
+
+ def doClick(self,e):
+  evt=self.dom.document.createEvent("MouseEvents")
+  evt.initMouseEvent("click", True, True, self.dom, 0, 0, 0, 0, 0, False, False, False, False, 0, None)
+  return 0 if e.dispatchEvent(evt) else 1
 
  def handleFormInput(self,element):
   log("handleFormInput",element)
@@ -1817,6 +1823,7 @@ length: the maximum length for this text entry (element.attr=maxlength is the co
   self.doPaint(force)
 
  def doAccPaint(self):
+  b=time.time()
   self.p=parser(self.getAcc(self.dom.document))
   self.p.parse()
   c=time.time()
