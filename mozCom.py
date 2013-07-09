@@ -694,7 +694,7 @@ getAccessibleTree(aDoc,l);
 serialize(l,ret);
 return ret;
 }
-repl.getDocJson=function(root,end)
+repl.getDocJson=function(root,nocache)
 {
 grabVars={
 "A":["textContent","href"],
@@ -734,15 +734,44 @@ func=repl.inMap;
 } else {
 func=repl.justAddMap;
 };
-//func=repl.justAddMap;
+func=repl.justAddMap;
 var atime,w,l,cur,ll;
 l=[];
 atime=repl.time();
 w=this.getDomList(root);
 ll=w.length;
+var ww=[];
+var skip=-1;
+var cs=root.defaultView.getComputedStyle;
 for(var i=0;i<ll;i++)
 {
-var t=w[i];
+if(skip!=-1&&w[i][1]>skip)
+{
+continue;
+}
+if(skip!=-1)
+{
+skip=-1;
+}
+var cst,tt;
+tt=w[i][0];
+if(tt.offsetWidth==0&&tt.offsetHeight==0)
+{
+try{cst=cs(tt);}catch(e){cst=null;};
+//cst=null;
+//var elems=["LI","UL"];
+if (cst&&(cst.visibility=='hidden'||cst.display=='none'))
+{
+skip=w[i][1];
+continue;
+}
+}
+ww.push(w[i]);
+}
+ll=ww.length;
+for(var i=0;i<ll;i++)
+{
+var t=ww[i];
 l.push(getNode(t,func));
 }
 //l.push(repl.time()-atime);
