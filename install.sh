@@ -1,5 +1,6 @@
 #!/bin/bash
 root=$(pwd)
+arch=$(uname -m)
 echo "warning. this install will remove all saved firefox settings from your profile. This includes all thunderbird messages, firefox favorites, etc. You have ten seconds to cancel this install."
 sleep 10
 if [ ! -f "./clifox" ]
@@ -15,7 +16,7 @@ if [ ! -f "./ff/firefox/firefox" ]
 then
 mkdir ff
 cd ff
-path="ftp://ftp.mozilla.org/pub/firefox/releases/latest/linux-x86_64/en-US/"
+path="ftp://ftp.mozilla.org/pub/firefox/releases/latest/linux-$arch/en-US/"
 wget --no-remove-listing "$path"
 fn=`cat ./.listing | tr '\r' '\n' | rev | cut -d ' ' -f 1 | rev | grep -i bz2`
 fullfn="$path$fn"
