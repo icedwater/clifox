@@ -356,7 +356,7 @@ class gui(forms):
 
  formElements=set("TEXTAREA,BUTTON,INPUT,SELECT,OPTION".split(","))
  newLineMakerElements=set("BR,P".split(","))
- newLineElements=set("TITLE,HR,LI,TD,H1,H2,H3,H4,H5,H6,BR,P,A,IMG,SOUND,BGSOUND".split(","))
+ newLineElements=set("FORM,TITLE,HR,LI,TD,H1,H2,H3,H4,H5,H6,BR,P,A,IMG,SOUND,BGSOUND".split(","))
  [newLineElements.add(i) for i in formElements if i!="OPTION"]
  ignoreElements=set("OPTION,NOSCRIPT,SCRIPT,STYLE".split(","))
 
@@ -426,7 +426,9 @@ class gui(forms):
      v="*"*len(v)
    else:
     v=""
-   if n.type and n.type.lower() in ("submit","image"):
+   if n.title:
+    return 0,"[%s] %s" % (n.title,v,)
+   elif n.type and n.type.lower() in ("submit","image"):
     return 0,"[submit] %s" % (v,)
    elif n.lable:
     return 0,"[%s] %s" % (n.lable,v,)
