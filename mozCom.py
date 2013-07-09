@@ -465,10 +465,15 @@ repl.print({"m":"t","a":[e.toString()]});
 
 onStatusChange:function(aWebProgress,aRequest,aStatus,aMessage)
 {
+if(repl.status.indexOf(aMessage)>-1)
+{
+return;
+}
 try{
 var o={"aWebProgress":aWebProgress,"aRequest":aRequest,"aMessage":aMessage,"aStatus":aStatus};
 var oid=repl.justAddMap(o);
 repl.print({"m":"E","a":[oid],"t":"onStatusChange"});
+repl.status.push(aMessage);
 }catch(e){
 repl.print({"m":"t","a":[e.toString()]});
 };
@@ -578,6 +583,7 @@ obs.addObserver(repl.windowGuiKiller, "dom-window-destroyed", false);
 //content-document-global-created", false);
 repl.killers.push([repl.windowGuiKiller,repl.windowGuiKiller.kill]);
 
+repl.status=[];
 repl.accView=function(aDocument)
 {
 function getAccessibleDoc(doc)

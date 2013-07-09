@@ -395,6 +395,8 @@ class gui(forms):
 #    return "[img] "
    else:
     return 0,"[img] unknown"
+  elif t=="FRAME" or t=="IFRAME":
+   return 0,"[frame] "+n.src
   elif t=="A":
    x=self.getElementsByTagName(n,"img")
    if x:
@@ -1150,6 +1152,16 @@ jsRoot points to the root class of js
 #  self.dom=self.page.linkedBrowser.contentDocument.defaultView
 #  self.pageRefreshData()
   self.restoreWindow(self.page)
+  if "youtube.com" in self.dom.location.host and "youtube.com/embed/" in self.dom.location.href:
+   try:
+#    self.dom.wrappedJSObject.yt.player.getPlayerByElement("player").playVideo()
+    b=self.dom.wrappedJSObject.document.body
+    x=b.appendChild(self.dom.wrappedJSObject.document.createElement("div"))
+    x.innerHTML='<a onclick="javascript:yt.player.getPlayerByElement(\'player\').playVideo();">play video</a>'
+    x.innerHTML+='<a onclick="javascript:yt.player.getPlayerByElement(\'player\').stopVideo();">stop video</a>'
+    self.doPaint(1)
+   except:
+    pass
 
  def tabSelect(self,e):
   """firefox fires eventon tab switch"""
@@ -1499,6 +1511,8 @@ length: the maximum length for this text entry (element.attr=maxlength is the co
   log("onFocus:d="+str(d)+",parentNodeNames="+str(self.parentNodeNames(d)))
   if d.nodeName=="A":
    p=d
+  elif d.nodeName in ("IFRAME","FRAME"):
+   p=d
   elif not self.isOnLayoutElement(d) and "A" in self.parentNodeNames(d):
    p=d.parentNode
    while p.nodeName!="A": p=p.parentNode
@@ -1506,6 +1520,8 @@ length: the maximum length for this text entry (element.attr=maxlength is the co
    return self.setStatus("")
   if p.hasAttribute("href"):
    url=p.href
+  elif p.src:
+   url=p.src
   else:
    url=None
   if url!=None:
@@ -1549,6 +1565,9 @@ length: the maximum length for this text entry (element.attr=maxlength is the co
    return self.doClick(d)
 #   self.dom.location.href=url
 #   return
+  if d.nodeName=="IFRAME" or d.nodeName=="FRAME":
+   self.dom.location.href=d.src
+   return
   return self.doClick(d)
 
  def doClick(self,e):
