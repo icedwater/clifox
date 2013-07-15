@@ -7,7 +7,7 @@ try:
 except:
  print("Either the JSON or simplejson module needs to be installed. Data is passed from Firefox to Python using the JSON format.")
  sys.exit(1)
-dbg=0
+dbg=2
 dbgl=[]
 from utils import log
 true=True
@@ -528,7 +528,6 @@ repl.print({"M":"w","a":["authPromptUsernameAndPassword",dialogTitle, text, pass
 return true;
 },
 
-
 _toggleProgressListener:function(aWebProgress, aIsAdd)
 {
 if (aIsAdd)
@@ -552,6 +551,15 @@ if(aTopic=="content-document-global-created")
 {
 var wo;
 aSubject.QueryInterface(Ci.nsIDOMWindow);
+if(aSubject.top==aSubject)
+{
+try
+{
+repl.mutationObsObj.add(aSubject);
+} catch(e) {
+//repl.print({"m":"w","a":[e.toString()]});
+}
+}
 wo=aSubject.wrappedJSObject;
 wo.alert=function(){};
 wo.confirm=function(){};
@@ -562,6 +570,11 @@ if(aTopic=="dom-window-destroyed")
 {
 //this.kill();
 aSubject.QueryInterface(Ci.nsIDOMWindow);
+if(aSubject.mo)
+{
+aSubject.mo.disconnect();
+aSubject.mo=null;
+}
 wo=aSubject.wrappedJSObject;
 delete wo.alert;
 delete wo.confirm;
@@ -700,18 +713,59 @@ getAccessibleTree(aDoc,l);
 serialize(l,ret);
 return ret;
 }
+repl.notifyMutations=function(records,observer)
+{
+if(gBrowser.selectedTab.linkedBrowser.contentWindow==observer.window)
+{
+var t={"records":records,"obs":observer};
+repl.print({"m":"e","a":[repl.addMap(t)],"t":"mutation"});
+}
+}
+repl.mutationObsObj={
+add:function(w)
+{
+w.mo=w.MutationObserver(repl.notifyMutations);
+w.mo.observe(w.document,{"childList":1,"attributes":1,"characterData":1,"subtree":1});
+w.mo.window=w;
+},
+init:function()
+{
+for(var i=0;i<gBrowser.visibleTabs.length;i++)
+{
+var w=gBrowser.visibleTabs[i].linkedBrowser.contentWindow;
+if(w.mo)
+{
+w.mo.disconnect();
+w.mo=null;
+}
+this.add(w);
+}
+},
+kill:function()
+{
+for(var i=0;i<gBrowser.visibleTabs.length;i++)
+{
+var w=gBrowser.visibleTabs[i].linkedBrowser.contentWindow;
+if(w.mo)
+{
+w.mo.disconnect();
+w.mo=null;
+}
+}
+}
+};
 repl.getDocJson=function(root,nocache)
 {
 grabVars={
-"A":["textContent","href"],
-"SELECT":["textContent"],
-"INPUT":["type","value","checked","lable","name"],
-"OPTION":["textContent"],
-"IMG":["alt","src"]
+"A":["textContent","href","title"],
+"INPUT":["title","type","value","checked","name"],
+"BUTTON":["title","type","value","checked","name"],
+"OPTION":["textContent","value"],
+"IMG":["alt","src","title"]
 }
-function getNode(x,func)
+function getNode(x,func,ids)
 {
-var a,at,al,j,i,n,num;
+var a,at,al,j,i,n,num,gv;
 num=x[1];
 n=x[0];
 a=[];
@@ -719,13 +773,20 @@ a.push(func(n));
 a.push(num);
 a.push(n.nodeName);
 a.push(n.nodeValue);
-a.push(n.nodeType);
-a.push(repl.inMap(n.parentNode));
-if (n.nodeName in grabVars)
+//comment this out?
+a.push(0);
+//keep hashtable of ids for each run, and use the next lowest id to that of this element?
+a.push(num==0?null:ids[num-1]);
+//a.push(repl.inMap(n.parentNode));
+//maybe just do grabvars[n.nodeName]?
+//if(grabVars.indexOf(n.nodeName)>-1)
+//{
+gv=grabVars[n.nodeName];
+if(gv)
 {
-var gv=grabVars[n.nodeName];
-var gvl=gv.length;
-for (var i=0;i<gvl;i++)
+var gvl,i;
+gvl=gv.length;
+for (i=0;i<gvl;i++)
 {
 a.push(gv[i]);
 a.push(n[gv[i]]);
@@ -734,13 +795,15 @@ a.push(n[gv[i]]);
 return a;
 };
 var func;
+var ids={};
 if(repl.inMap(root.firstChild)!=null && repl.inMap(root.lastChild)!=null)
 {
-func=repl.inMap;
+func=repl.addMap;
 } else {
 func=repl.justAddMap;
-};
-func=repl.justAddMap;
+}
+//comment this out?
+//func=repl.justAddMap;
 var atime,w,l,cur,ll;
 l=[];
 atime=repl.time();
@@ -777,12 +840,17 @@ ww.push(w[i]);
 ll=ww.length;
 for(var i=0;i<ll;i++)
 {
-var t=ww[i];
-l.push(getNode(t,func));
+var t,x;
+t=ww[i];
+x=getNode(t,func,ids);
+l.push(x);
+ids[x[1]]=x[0];
 }
 //l.push(repl.time()-atime);
 repl.print({"m":"w","a":["docSerializationTime",repl.time()-atime]});
 return l;
-};
+}
+repl.mutationObsObj.init();
+repl.killers.push([repl.mutationObsObj,repl.mutationObsObj.kill]);
 """
 mzjs=mzjs.strip()
