@@ -1,8 +1,17 @@
-import os
+import os,traceback
+import StringIO as stringio
 def Filename(fn="",root=None):
  if not root:
   root=os.path.expanduser("~/.clifox/")
  return root+fn
+
+def generate_error_report(e=None):
+ fp = stringio.StringIO()
+ traceback.print_exc(file=fp)
+ message = fp.getvalue()
+ del fp
+ log(message)
+ return message
 
 logfh=open(Filename("clifox.log"),"wb")
 def log(*l):
