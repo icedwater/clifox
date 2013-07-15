@@ -123,7 +123,7 @@ for instance, this function would return false if one was scanning a line with a
 """
   y=self.y if y==None else y
   x=self.x if x==None else x
-  elems=self.ret[y]
+  elems=self.ret.get(y,[])
   elems=[i for i in elems if i[0]<x]
   tl=0
   for i in elems[::-1]:
@@ -147,7 +147,7 @@ class htmlParser(parser):
  def div(self,idx):
   return ''
 
- def h1(self):
+ def h1(self,idx):
   self.nl(idx)
   return ''
  h2=h1
@@ -296,7 +296,7 @@ class htmlParser(parser):
    if blank>maxCheck:
     break
    y-=1
-   t="".join([i[1].strip() for i in self.ret[y]])
+   t="".join([i[1].strip() for i in self.ret.get(y,[])])
    if not t: blank+=1
   return blank
 
