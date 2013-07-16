@@ -310,15 +310,11 @@ used, e.g. when reading a webpage as a whole document.
  def moveToElem(self,target):
 #  log("target:",target)
   if target==None: return
-  td=[i[1:3] for i in self._display[target] if len(i)>=4 and i[3].strip()!='']
-  if len(td)==0:
-   td=self._display[target][-1][1:]
-  else:
-   td=td[0]
-  screenNum,y,x=self.getScreenNumber(td[0]),self.getLineNumber(td[0]),td[1]
-  log("moveToElem:","screenNum",screenNum,"y",y,"x",x,str(target))
-  self.showScreen(screenNum=screenNum,y=y,x=x)
-  return td
+  if type(target)!=tuple:
+   target=self.findElem(target)
+  y,x,target=target
+  self.showScreen(absoluteY=y,x=x)
+  return target
 
  def wrapToFit(self, text, width=80, indent=None):
   log("wrapToFit:",text,width,indent)
@@ -572,7 +568,7 @@ length: the maximum length for this text entry (element.attr=maxlength is the co
    while p.nodeName!="A": p=p.parentNode
   else:
    return self.setStatus("")
-  if p.hasAttribute("href"):
+  if p.href!=None:
    url=p.href
   elif p.src:
    url=p.src

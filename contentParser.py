@@ -329,12 +329,17 @@ class htmlParser(parser):
    if not t: blank+=1
   return blank
 
+ def hr(self,idx):
+  return '-'*40
+
  def br(self,idx):
+  self.nl(idx)
   if self.getBlankLines(idx)<=2:
    self.fnl(idx)
   return ''
 
  def p(self,idx):
+  self.nl(idx)
   if self.getBlankLines(idx)<=1:
    self.fnl(idx)
   return ''
