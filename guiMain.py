@@ -564,6 +564,6 @@ Return the first matching node.
   else:
    for yW in xrange(absoluteY,0,-1):
     for xW,text,elem in self._display[yW][::-1]:
-#     if yW==y and xW==x: continue
+     if yW==y: continue
      if elem.nodeName in tag:
       return yW,xW,elem
