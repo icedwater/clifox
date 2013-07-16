@@ -13,10 +13,11 @@ class parser(object):
   self.lst=nodes
   self.funcCache={}
   self.endFuncCache={}
+  self.skip=self.SKIP_THIS
 
  def wrapText(self, text, width=None, indent=None):
   width=self.maxx if width==None else width
-  log("wrapToFit:",text,width,indent)
+#  log("wrapToFit:",text,width,indent)
   start,end=0,0
   lines=[]
   textLength=len(text)
@@ -24,6 +25,9 @@ class parser(object):
    end=width-indent
   else:
    end=width
+  if textLength<end:
+   lines.append(text)
+   return lines
   while end<textLength:
    if text[end]==' ':
     lines.append(text[start:end])
@@ -41,6 +45,7 @@ class parser(object):
   if item.nodeName in self.funcCache:
    return self.funcCache[item.nodeName]
   x=getattr(self,item.nodeName.lower().replace("#",""),self.unknown)
+  log("item:",x)
   self.funcCache[item.nodeName]=x
   return x
 
@@ -54,6 +59,7 @@ class parser(object):
    return x
 
  def parse(self,start=0,end=-1):
+  self.labels=dict([(i.control,i.textContent) for i in self.lst if i.nodeName=="LABEL"])
   end=len(self.lst) if end==-1 else end
   self.ret={}
   open=[]
@@ -78,10 +84,11 @@ class parser(object):
    itemFunc=self.itemFunc(i)
 #text,move,type
    text=itemFunc(idx)
-   move=self.SKIP_THIS
+   move=self.skip
    if move==self.SKIP_CHILDREN:
     skip=self.getChildCount(idx)
-   if self.x==0:
+    self.skip=self.SKIP_THIS
+   if self.x==0 or "".join([i[1] for i in self.ret.get(self.y,[])]).endswith(" "):
     text=text.lstrip()
 #   else:
    text=self.spaces.sub(" ",text)
@@ -92,7 +99,6 @@ class parser(object):
     l=new.pop(0)
     if not self.ret.get(self.y,None):
      self.ret[self.y]=[]
-    log("wrap:",self.y,self.x,len(l),l)
     self.ret[self.y].append((self.x,l,self.lst[idx]))
     self.x+=len(l)
     if new: self.y+=1; self.x=0
@@ -192,6 +198,7 @@ class htmlParser(parser):
   return self.lst[idx].nodeValue
 
  def option(self,idx):
+  self.skip=self.SKIP_CHILDREN
   return ''
 
  def select(self,idx):
@@ -205,7 +212,9 @@ class htmlParser(parser):
     v=n.options[0].textContent
   else:
    v=n.options[0].textContent
-  return "["+nm+"] "+v
+  c=v
+  if nm: c="["+nm+"] "+c
+  return c
 
  def input(self,idx):
   nm=self.getInputName(idx)
@@ -241,7 +250,8 @@ class htmlParser(parser):
   return "[*"+self.lst[idx].value+"]"
 
  def inputCheckbox(self,idx):
-  return "["+"x" if self.lst[idx].checked else " "+"]"
+  c="x" if self.lst[idx].checked else " "
+  return "["+c+"]"
 
  def inputRadio(self,idx):
   c="+" if self.lst[idx].checked else "-"
@@ -253,49 +263,42 @@ class htmlParser(parser):
   n=self.lst[idx]
   if n.title:
    t=n.title
-  elif n.id:
-   id=n.id
-   ids=[i for i in self.lst if i.nodeName=="LABEL" and i['for']==id]
-   if ids:
-    t=ids[0]
-   else:
-    t=n.name
+  elif n in self.labels:
+   t=self.labels[n]
   else:
    t=n.name
   return t
 
  def a(self,idx,fromImg=0):
   self.nl(idx)
-  if fromImg==1:
-   n=idx
-  else:
-   n=self.lst[idx]
-  if fromImg==1 or "IMG" not in [i.nodeName for i in self.getChildren(idx)]:
+  n=self.lst[idx]
+  imgs=[i for i in self.getChildren(idx) if i.nodeName=="IMG"]
+  if not imgs:
    if n.textContent:
     return "{} "
    if not n.textContent and n.title:
     return "{} "+n.title
    if not n.textContent:
     return "{"+n.href+"} "
+  else:
+   try:
+    return "{"+self.img(self.getChildren(imgs[0]),1).strip()+"}"
+    self.skip=self.SKIP_CHILDREN
+   except:
+    pass
   return ''
 
  def endA(self,idx):
   self.fnl(idx)
   return ''
 
- def img(self,idx):
-  self.nl(idx)
+ def img(self,idx,embedded=0):
+  if not embedded: self.nl(idx)
   i=self.lst[idx]
-  link=0
-  if i.parentNode.nodeName=="A":
-   link=1
   if i.alt:
    t=i.alt
   elif i.title:
    t=i.title
-  elif link:
-   x=i.parentNode
-   t=self.a(x,fromImg=1)
   else:
    if i.src.split(":",1)[0].lower()=='data':
     t="unknown"
@@ -316,6 +319,7 @@ class htmlParser(parser):
    t=n.textContent
   if not t:
    t="submit"
+  self.skip=self.SKIP_CHILDREN
   t="["+t+"] "
   return t
 
