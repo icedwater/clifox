@@ -567,7 +567,7 @@ length: the maximum length for this text entry (element.attr=maxlength is the co
    p=d
   elif d.nodeName in ("IFRAME","FRAME"):
    p=d
-  elif not self.isOnLayoutElement(d) and "A" in self.parentNodeNames(d):
+  elif "A" in self.parentNodeNames(d):
    p=d.parentNode
    while p.nodeName!="A": p=p.parentNode
   else:
@@ -714,6 +714,10 @@ length: the maximum length for this text entry (element.attr=maxlength is the co
   self.screenPosX-=1
   log("sX="+str(self.screenPosX))
   if self.screenPosX<0:
+   if self.screenPos==0:
+    self.noPrev("characters")
+    self.screenPosX+=1
+    return
 # or self.screenPosX>len(self.screen.instr(self.screenPos,0,self.maxx).strip()):
    log("sX<0,sX="+str(self.screenPosX))
    self.screenPosX=self.maxx-1
