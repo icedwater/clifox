@@ -321,8 +321,8 @@ def initCliFox(hostname="localhost",q=None,js=None,ignoreErrors=0):
 mzjs="""
 repl.parentNodeNames=function(n)
 {
-var l=[];
-var p;
+var l,p;
+l=[];
 p=n.parentNode;
 while(p)
 {
@@ -370,7 +370,7 @@ n=n.nextSibling;
 }
 return l;
 };
-repl.time=function(){return new Date().getTime()/1000;};
+repl.time=function(){var d=new Date().getTime()/1000;return d;};
 repl.closeAll=function(){for(var i=this.gBrowser.tabs.length;i>0;i--){this.gBrowser.tabs[i].linkedBrowser.contentWindow.close();};};
 repl.lsbrs=function(){var j,i,x;i=0;j=[];for(i=0;i<this.gBrowser.tabs.length;i++){x=this.gBrowser.tabs[i].linkedBrowser.contentDocument.location.href;j.push(x);};return j.toString();};
 repl.ls=function(obj){var z,i;z=[];for(i in obj){z.push(i);};return z;};
@@ -399,7 +399,7 @@ return repl.justAddMap(obj,opts);
 };
 repl.justAddMap=function(obj,opts)
 {
-var i;
+var i,parent,name;
 i=repl.genid();
 opts=opts?opts:{};
 parent=opts.parent?opts.parent:null;
@@ -756,12 +756,13 @@ w.mo=null;
 };
 repl.getDocJson=function(root,nocache)
 {
-grabVars={
+var grabVars={
 "A":["textContent","href","title"],
 "INPUT":["title","type","value","checked","name"],
-"BUTTON":["title","type","value","checked","name"],
+"BUTTON":["title","type","value","checked","name","textContent"],
 "OPTION":["textContent","value"],
-"IMG":["alt","src","title"]
+"IMG":["alt","src","title"],
+"LABEL":["control"]
 }
 function getNode(x,func,ids)
 {
@@ -804,14 +805,14 @@ func=repl.justAddMap;
 }
 //comment this out?
 //func=repl.justAddMap;
-var atime,w,l,cur,ll;
+var atime,w,l,cur,ll,ww,skip,cs;
 l=[];
 atime=repl.time();
 w=this.getDomList(root);
 ll=w.length;
-var ww=[];
-var skip=-1;
-var cs=root.defaultView.getComputedStyle;
+ww=[];
+skip=-1;
+cs=root.defaultView.getComputedStyle;
 for(var i=0;i<ll;i++)
 {
 if(skip!=-1&&w[i][1]>skip)
