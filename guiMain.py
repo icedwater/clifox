@@ -2,6 +2,7 @@ import os,curses,mozCom,utils,re,unidecode
 from utils import log,generate_error_report
 import configParser
 config=configParser.config
+import contentParser
 from guiObjects import *
 import guiTree
 """holds classes for handling page rendering and element navigation"""
@@ -149,73 +150,6 @@ class gui(forms):
    if l[i].num<=snum:
     return i
   return None
-
- ws=[chr(i) for i in xrange(1,255)]
-#string.whitespace+string.printable
- def getElementText(self,n):
-  t=n.nodeName
-  t=t if t else 'unnamedNode'
-#  if self.ignoreElements.intersection(self.parentNodeNames(n)): return 0,None
-  if t=="#text":
-   return 0,n.nodeValue.replace("\n"," ").replace("\r"," ").replace("  "," ")
-  elif t=="HR":
-   return 0,"-"*self.maxy
-  elif t=="LI":
-   return 1,"* "
-  elif t=="IMG":
-   if n.alt:
-    return 0,"[img] "+n.alt
-   elif n.src and n.src.split(":",1)[0]!="data":
-    return 0,"[img] "+n.src
-#   elif n.hasChildNodes() and n.nodeValue!="":
-#    return "[img] "
-   else:
-    return 0,"[img] unknown"
-  elif t=="FRAME" or t=="IFRAME":
-   return 0,"[frame] "+n.src
-  elif t=="A":
-   x=self.getElementsByTagName(n,"img")
-   if x:
-    x=x[0]
-    x._flags_skip=1
-    _,t=self.getElementText(x)
-    if t.startswith("[img] "): t=t[6:]
-    t="{["+t+"]}"
-    return 0,t
-   elif n.textContent!="":
-#[i for i in self.nodes_flat if i.parentNode==n] and n.textContent!="":
-    return 1,"{} "
-   elif n.name:
-    return 1,''
-   elif n.href:
-    return 1,"{%s}" % (n.href,)
-   else:
-    return 1,"{} "
-  elif t in self.formElements:
-   if t=="INPUT" and n.type and n.type.lower()=="hidden":
-    return 1,None
-   if str(n.type).lower()=="checkbox":
-    v="x" if n.checked else " "
-   elif n.value:
-    v=n.value
-    if str(n.type).lower()=="password":
-     v="*"*len(v)
-   else:
-    v=""
-   if n.title:
-    return 0,"[%s] %s" % (n.title,v,)
-   elif n.type and n.type.lower() in ("submit","image"):
-    return 0,"[submit] %s" % (v,)
-   elif n.lable:
-    return 0,"[%s] %s" % (n.lable,v,)
-   elif n.name:
-    return 0,"[%s] %s" % (n.name,v,)
-   else:
-    return 0,"[unknown form element] %s" % (str(v),)
-  elif t[0]!="#":
-   return 0,n.nodeValue
-  else:
-   return 0,None
 
  def getElementsByTagName(self,root,tag=""):
   tag=tag.upper()
@@ -454,109 +388,12 @@ class gui(forms):
   self.dom.document.ref.vars['parentNode']=None
   try:
    nodes=self.iterNodes(self.dom.document)
-   nodes=self.makeClosings(nodes)
-   self.nodes=nodes
-   self.nodes_flat=[i for i in nodes if type(i)!=tuple]
-  except:
-   generate_error_report()
-#  log("got all nodes,",len(nodes),repr([i for i in nodes]))
-  last=None
-  self.newLineCount=0
-  self._display={}
-  self.ys={}
-  if dirty!=None:
-   nodes=nodes[nodes.index(dirty):]
-   self.y,self.x=self.findNextPositionLocation(nodes)
-   last=nodes[0].previousSibling
-#if a node in nodes is an end marker, it will be a tuple. otherwise, it will be a node
-#set all lists for each node in nodes to an empty list, as we are basically clearing all previous positions
-  [self._display.__setitem__(j,[]) for j in self.nodes_flat]
-  lenNodes=len(nodes)
-  nid=-1
-  while nid+1<lenNodes:
-   self.nidx+=1
-   nid+=1
-   n=nodes[nid]
-#we're at the end of an element
-   if type(n)==tuple:
-    n,t=n[1],n[1].nodeName if n[1].nodeName else None
-    if t in self.newLineElements and t !="A":
-#if we need to separate the end of this element from the next, e.g. this is the end of an h1 element, and we have to put a new line, then do so
-#skip links, because we can put text after them, and keep from using up excessive vertical pages
-     self.y+=1; self.x=0
-     currentI=self.nidx
-     while currentI+1<lenNodes and type(nodes[currentI])==tuple:
-#while we're still in the nodes list, and we are encountering end elements, e.g. </h1></div>, etc
-      currentI+=1
-#~~
-      if type(nodes[currentI])!=tuple:
-#if the element after the one we are currently on is not an end element, then add an index to it's _display property, and exit this loop (while loop will break because of finding this node)
-       self._display[nodes[currentI]].append((1,self.y,self.x,""))
-    continue
-#one-time skip of an element
-   if n._flags_skip:
-    n._flags_skip=0; continue
-#maybe make the below an else statement with the tuple check above?
-   self._display[n].append((1,self.y,self.x,''))
-   i=n.nodeName
-#skip script,style,noscript, etc
-   if i in self.ignoreElements:
-    tnid=self.getNextNonChildNode(n,nodes)
-    if tnid!=None:
-     nid=tnid-1
-     self.nidx=nid
-     continue
-#if this starting element requires a new line
-#it's not a new line type itself, e.g. paragraph or line break
-#it's indeed a start element
-#basically, if there are nodes with text on our same line, and as above, we're on an element needing a new line, then we supply one. This means that we won't put a new line in unless there is already text on this line, so we won't be inserting multiple blank lines for ending elements and starting new ones.
-#for all nodes whose starting position is on the same line as the current node, before this node in the nodes list, and whose text is not blank or whitespace
-#   log("elem:",i,type(n),self.textOnSameLine(nodes))
-#i not in ("BR","P") and \
-   if i in self.newLineElements and \
-type(n)!=tuple and \
-self.textOnSameLine(nodes):
-    self.y+=1; self.x=0; self._display[n].append((1,self.y,self.x,''))
-#add second blank line for paragraphs
-    if i=="P": self.y+=1; self.x=0; self._display[n].append((1,self.y,self.x,''))
-   formatOnly,text=self.getElementText(n)
-   if text==None: text=''
-   if type(text)==int: text=str(text)
-   text=unidecode.unidecode(text)
-   text=re.sub(r"^\s+|\s+$",' ',text)
-#if text.strip():
-   if text.lstrip():
-    self.newLineCount=0
-#    text=text.replace("\t"," ").replace("\r"," ").replace("\n"," ").replace("  "," ")
-    if self.nidx>0:
-     lastNode=nodes[self.nidx-1]
-#     if type(lastNode)!=tuple and lastNode.nodeName not in ("BR","P"):
-#      text=text.lstrip()
-    lenT=len(text)
-    if (self.x+lenT)<w:
-     self._display[n].append((formatOnly,self.y,self.x,text))
-     if text: self.ys[self.y]=1
-     self.x+=lenT
-    elif self.x+lenT>w and lenT<w:
-     self.y,self.x=self.y+1,lenT
-     self._display[n].append((formatOnly,self.y,0,text))
-     if text: self.ys[self.y]=1
-    else:
-     for t in self.wrapToFit(text, self.maxx, self.x):
-      self._display[n].append((formatOnly,self.y,self.x,t))
-      if t: self.ys[self.y]=1
-      oldY,oldX=self.y,self.x+lenT
-      self.y,self.x=self.y+1,0
-     if oldX<w: self.y,self.x=oldY,oldX
-  self.numLines=self.y
-  self.xn=nodes
-  return
-  try:
-   fh=utils.open("logs/screenTextRefresh.txt","wb")
-   fh.write(str(self.dom.document))
-   fh.close()
-  except:
-   generate_error_report()
+   p=contentParser.htmlParser(nodes)
+   self._display=p.parse()
+   self.numLines=max(self._display.keys())
+  except Exception,e:
+   utils.generate_error_report()
+   self.setStatus(str(e))
 
  def writeScreenCoordsToFile(self):
   return
@@ -591,8 +428,6 @@ self.textOnSameLine(nodes):
 #  return rootNode
 
  def showScreen(self,screenNum=None,y=None,absoluteY=None,x=None,force=0):
-#  if self.dom.document._display==self.dom.document.childNodes[0]._display: log("displays still the same")
-#  [log(i[-3]) for i in inspect.stack()]
   self.writeScreenCoordsToFile()
   _absoluteY=absoluteY
   _screenNum=screenNum
@@ -614,16 +449,17 @@ self.textOnSameLine(nodes):
    self.onFocus()
    return
   self.screen.clear()
-  for n in self.nodes_flat: #self.iterNodes(self.dom.document):
-#   log("sscr.node:"+n.nodeName)
-   for _,nY,nX,t in self._display[n][1:]:
-#    log("SSCR:screenNum=%s,nY=%s,nX=%s,t=%s" % (str(screenNum),str(nY),str(nX),str(t),))
-    if nY<absoluteY:
-     continue
-    if nY>absoluteY+self.maxy:
-     break
-#    log("draw",nY-absoluteY,nX,t)
-    self.screen.addstr(nY-absoluteY,nX,t)
+  low,high=absoluteY,absoluteY+self.maxy
+  yW=0
+  while low<high:
+   elems=self._display.get(low,[])
+   for xW,text,n in elems:
+    try:
+     self.screen.addstr(yW,xW,text)
+    except:
+     log("error:",yW,xW,text)
+   yW+=1
+   low+=1
   self.screenPos,self.screenPosX=y,x
   self.screenNum=screenNum
   self.screen.move(y,x)
@@ -642,31 +478,35 @@ self.textOnSameLine(nodes):
   focus=self.getFocusedElement()
   if direction not in ["previous","next"] or self.searchString=="":
    self.searchString=self.prompt('Search String:',self.entry)
-  nodes=self.nodes_flat #self.iterNodes(self.dom.document)
-  nodesLength=len(nodes)
-  focusIndexO=nodes.index(focus)
-  if direction=="backward" or direction=="previous":
-   index=-1
-   function="rfind"
-   nodes=nodes[::-1]
-   focusIndex=nodes.index(focus)
-   nodes=nodes[focusIndex+1:]+nodes[:focusIndex+1]
-  if direction=="forward" or direction=="next":
-   index=None
-   function="find"
-   focusIndex=nodes.index(focus)
-   nodes=nodes[focusIndex+1:]+nodes[:focusIndex+1]
-   log("searching %d nodes, old size %d, location of current node is %d, old loc was %d" % (len(nodes),nodesLength,focusIndex,focusIndexO,))
-  for n in nodes:
-   for _,nY,nX,t in self._display[n][1::index]:
-    if config.caseSensitiveSearch=="true":
-     l=getattr(t,function)(self.searchString)
+  if direction in ("forward","next"):
+   direction=1
+  else:
+   direction=-1
+  ss=self.searchString
+  elem=None
+  pos=self.screenPos
+  d=self._display
+  lines=d.keys()
+  if direction==1:
+   lines=[i for i in lines if i>pos]+[i for i in lines if i<pos]+[i for i in lines if i==pos]
+   func="find"
+  else:
+   lines=[i for i in lines if i<pos]+[i for i in lines if i>pos]+[i for i in lines if i==pos]
+   direction=-1
+  func="rfind"
+  for y in lines:
+   for i in d[y][::direction]:
+    if config.caseSensitiveSearch:
+     pos=getattr(i[1].lower(),func)(ss)
     else:
-     l=getattr(t.lower(),function)(self.searchString.lower())
-    if l!=-1:
-     log("found element %s at %d,%d" % (str(n),nY,nX,))
-     return self.showScreen(absoluteY=nY,x=nX+l)
-  self.setStatus("Search String {0} not found.".format(self.searchString))
+     pos=getattr(i[1],func)(ss)
+    if pos!=-1:
+     elem=(y,i[0],pos)
+     break
+   if elem:
+    break
+  return self.showScreen(absoluteY=elem[0],x=elem[1]+elem[2])
+  return self.setStatus("Search string \"%s\" not found." % (self.searchString,))
 
  def isOnLayoutElement(self,n,sn=None,y=None,x=None):
   """Determine if provided position tripple is located on a coordinate considered to be accessible spacing.
@@ -696,31 +536,12 @@ If said next text requires a line break, That line break will be attached to tha
   y=self.screenPos if y==None else y
   x=self.screenPosX if x==None else x
   pos=self.getScreenAbsolutePosition(sn,y)
-  nodes=self.nodes_flat #self.iterNodes(self.dom.document)
-  l=[]
-  lenNodes=len(nodes)
-  i=lenNodes
-  while i-1>0:
-   i-=1
-   n=nodes[i]
-#   log("getDataObject:"+"pos:"+str(pos)+","+str(n.nodeName)+","+str(n._display))
-   if self._display[n]==[] or len(self._display[n])==1: l.append(n); continue
-   if self._display[n][0][1]<=pos<=self._display[n][-1][1]+1:
-    log("searching for pos %d, %d<=%d<=%d" % (pos,self._display[n][0][1],pos,self._display[n][-1][1],))
-    for frm,nY,nX,t in self._display[n]:
-#     log("displayInNode:pos="+str(pos)+",ny="+str(nY)+",x="+str(x)+",nX="+str(nX)+",nx+len(t)="+str(nX+len(t)+1))
-     if (t!='' or (t=='' and frm==0)) and nY==pos and (nX<=x<=nX+len(t)+1): # or t.strip()==''):
-#      log("getFocusedElement:returning "+n.nodeName+","+str(n),nY,nX,pos,y,x)
-      return n
-   if self._display[n][0][1] < pos:
-    if len(l)>0:
-     return l[-1]
-  i=len(nodes)
-  while i-1>0:
-   i-=1
-   n=nodes[i]
-   if len(self._display[n])>0 and self._display[n][-1][1]==pos and self._display[n][-1][2]==x:
-    return n
+  elems=self._display.get(pos,[])
+  elems2=[i for i in elems if x>=i[0]]
+  if elems2:
+   return elems2[-1][-1]
+  if elems:
+   return elems[-1][-1]
 
  def findElement(self,tag="",attrs={},direction="forward"):
   """given a list of tags and an optional dictionary of attributes, search the dom tree for the requested tag(s).
