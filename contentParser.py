@@ -1,3 +1,4 @@
+import re
 import utils
 log=utils.log
 class parser(object):
@@ -5,10 +6,13 @@ class parser(object):
  SKIP_THIS=-2
 #skip to next element of same or higher level (ignores all children)
  SKIP_CHILDREN=-1
+ spaces=re.compile("[\n\r\t ]+")
 
  def __init__(self,nodes,maxx=160):
   self.maxx=maxx
   self.lst=nodes
+  self.funcCache={}
+  self.endFuncCache={}
 
  def wrapText(self, text, width=None, indent=None):
   width=self.maxx if width==None else width
@@ -34,11 +38,20 @@ class parser(object):
   return lines
  
  def itemFunc(self,item):
-  return getattr(self,item.nodeName.lower().replace("#",""),self.unknown)
+  if item.nodeName in self.funcCache:
+   return self.funcCache[item.nodeName]
+  x=getattr(self,item.nodeName.lower().replace("#",""),self.unknown)
+  self.funcCache[item.nodeName]=x
+  return x
 
  def endItemFunc(self,item):
-  n=item.nodeName.replace("#","")
-  return getattr(self,"end"+n[0].upper()+n[1:].lower(),self.endUnknown)
+  try:
+   return self.funcCache[item.nodeName]
+  except:
+   n=item.nodeName
+   x=getattr(self,"end"+n[0].upper()+n[1:].lower().replace("#",""),self.endUnknown)
+   self.endFuncCache[item.nodeName]=x
+   return x
 
  def parse(self,start=0,end=-1):
   end=len(self.lst) if end==-1 else end
@@ -57,8 +70,8 @@ class parser(object):
     log("idx:",idx,"open:",len(open))
     rng=(self.lst[idx-1].num-self.lst[idx].num)+1
     close=[open.pop(-1) for iRng in xrange(rng)]
-    [self.endItemFunc(oC)(oC) for oC in close]
-   open.append(i)
+    [self.endItemFunc(self.lst[oC])(oC) for oC in close]
+   open.append(idx)
    if skip>0:
     skip-=1
     continue
@@ -68,13 +81,18 @@ class parser(object):
    move=self.SKIP_THIS
    if move==self.SKIP_CHILDREN:
     skip=self.getChildCount(idx)
-   new=self.wrapText(text)
+#   if self.x==0:
+#    text=text.strip()
+#   else:
+   text=self.spaces.sub(" ",text)
+   new=self.wrapText(text,self.maxx,self.x)
    if type(new)!=list:
     new=[new]
    while new:
     l=new.pop(0)
     if not self.ret.get(self.y,None):
      self.ret[self.y]=[]
+    log("wrap:",self.y,self.x,len(l),l)
     self.ret[self.y].append((self.x,l,self.lst[idx]))
     self.x+=len(l)
     if new: self.y+=1; self.x=0
@@ -123,16 +141,20 @@ for instance, this function would return false if one was scanning a line with a
 """
   y=self.y if y==None else y
   x=self.x if x==None else x
+  if x==0:
+   return 0
   elems=self.ret.get(y,[])
+  if not elems:
+   return 0
   elems=[i for i in elems if i[0]<x]
   tl=0
   for i in elems[::-1]:
    t=i[1].strip()
-   if t and i[2] in self.sameLinePreformatted:
+   if t and i[2].nodeName in self.sameLinePreformatted:
     return 0
    if t:
     return 1
-  return 1
+  return 0
 
 class htmlParser(parser):
  def nl(self,idx):
@@ -140,9 +162,12 @@ class htmlParser(parser):
    self.y+=1
    self.x=0
 
- def fnl(self):
+ def fnl(self,idx):
   self.y+=1
   self.x=0
+  if self.y not in self.ret:
+   self.ret[self.y]=[]
+  self.ret[self.y].append((self.x,'',self.lst[idx]))
 
  def div(self,idx):
   return ''
@@ -170,7 +195,7 @@ class htmlParser(parser):
   return ''
 
  def select(self,idx):
-  self.fnl()
+  self.fnl(idx)
   n=self.lst[idx]
   nm=self.getInputName(idx)
   if n.selectedIndex>=0:
@@ -186,7 +211,7 @@ class htmlParser(parser):
   nm=self.getInputName(idx)
   if nm==None:
    return
-  self.fnl()
+  self.fnl(idx)
   nt=self.lst[idx].type
   value=getattr(self,"input"+nt,self.inputUnknown)(idx)
   if self.lst[idx].disabled:
@@ -253,6 +278,10 @@ class htmlParser(parser):
     return "{"+n.href+"} "
   return ''
 
+ def endA(self,idx):
+  self.fnl(idx)
+  return ''
+
  def img(self,idx):
   self.nl(idx)
   i=self.lst[idx]
@@ -277,7 +306,7 @@ class htmlParser(parser):
   return ''
 
  def button(self,idx):
-  self.fnl()
+  self.fnl(idx)
   n=self.lst[idx]
   t=n.value
   if not t:
@@ -302,11 +331,11 @@ class htmlParser(parser):
 
  def br(self,idx):
   if self.getBlankLines(idx)<=2:
-   self.fnl()
+   self.fnl(idx)
   return ''
 
  def p(self,idx):
   if self.getBlankLines(idx)<=1:
-   self.fnl()
+   self.fnl(idx)
   return ''
 
