@@ -451,7 +451,7 @@ class gui(forms):
   self.screen.clear()
   low,high=absoluteY,absoluteY+self.maxy
   yW=0
-  while low<high:
+  while low<=high:
    elems=self._display.get(low,[])
    for xW,text,n in elems:
     try:
@@ -505,7 +505,8 @@ class gui(forms):
      break
    if elem:
     break
-  return self.showScreen(absoluteY=elem[0],x=elem[1]+elem[2])
+  if elem:
+   return self.showScreen(absoluteY=elem[0],x=elem[1]+elem[2])
   return self.setStatus("Search string \"%s\" not found." % (self.searchString,))
 
  def isOnLayoutElement(self,n,sn=None,y=None,x=None):
@@ -551,39 +552,18 @@ Return the first matching node.
   if type(tag)==str: tag=[tag]
   tag=[i.upper() for i in tag]
   currentNode=self.getFocusedElement()
-  nodes=self.nodes_flat #self.iterNodes(self.dom.document)
+#  nodes=self.nodes_flat #self.iterNodes(self.dom.document)
   y,x,sn=self.screenPos,self.screenPosX,self.screenNum
   absoluteY=self.getScreenAbsolutePosition(screenNum=sn,y=y)
-  idx=nodes.index(currentNode)
-  lenNodes=len(nodes)
   if direction=="forward":
-   idx-=1
-   while idx+1<lenNodes:
-    idx+=1
-    i=nodes[idx]
-    if i.nodeName not in tag:
-     continue
-    try:
-     d=self._display[i][1]
-    except:
-      continue
-    nY,nX=d[1:3]
-    if (nY>absoluteY):
-# or (nY==absoluteY and nX>x):
-     log("findElement:"+str(y)+","+str(x)+":"+str(self._display[i][1])+","+str(i))
-     return i
-  if direction=="backward":
-   while idx>0:
-    idx-=1
-    i=nodes[idx]
-    if i.nodeName not in tag:
-     continue
-    try:
-     d=self._display[i][1]
-    except:
-      continue
-    nY,nX=d[1:3]
-    if (nY<absoluteY): # or (nY==absoluteY and nX<x and currentNode.parentNode.parentNode!=i):
-     log("findElement:"+str(y)+","+str(x)+":"+str(self._display[i][1])+","+str(i))
-     return i 
-
+   for yW in xrange(absoluteY,max(self._display.keys())):
+    for xW,text,elem in self._display[yW]:
+     if yW==y and xW<=x: continue
+     if elem.nodeName in tag:
+      return yW,xW,elem
+  else:
+   for yW in xrange(absoluteY,0,-1):
+    for xW,text,elem in self._display[yW][::-1]:
+#     if yW==y and xW==x: continue
+     if elem.nodeName in tag:
+      return yW,xW,elem
