@@ -81,8 +81,8 @@ class parser(object):
    move=self.SKIP_THIS
    if move==self.SKIP_CHILDREN:
     skip=self.getChildCount(idx)
-#   if self.x==0:
-#    text=text.strip()
+   if self.x==0:
+    text=text.lstrip()
 #   else:
    text=self.spaces.sub(" ",text)
    new=self.wrapText(text,self.maxx,self.x)
@@ -213,6 +213,7 @@ class htmlParser(parser):
    return
   self.fnl(idx)
   nt=self.lst[idx].type
+  nt=nt[0].upper()+nt[1:].lower()
   value=getattr(self,"input"+nt,self.inputUnknown)(idx)
   if self.lst[idx].disabled:
    nm="disabled "+nm
@@ -344,3 +345,10 @@ class htmlParser(parser):
    self.fnl(idx)
   return ''
 
+ def tr(self,idx):
+  self.nl(idx)
+  return ''
+
+ def td(self,idx):
+  self.nl(idx)
+  return ''
