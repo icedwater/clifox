@@ -475,6 +475,7 @@ class gui(forms):
    pass
 
  def searchPage(self,direction="forward"):
+  pos=self.getScreenAbsolutePosition(self.screenNum,self.screenPos)
   focus=self.getFocusedElement()
   if direction not in ["previous","next"] or self.searchString=="":
    self.searchString=self.prompt('Search String:',self.entry)
@@ -484,16 +485,15 @@ class gui(forms):
    direction=-1
   ss=self.searchString
   elem=None
-  pos=self.screenPos
   d=self._display
   lines=d.keys()
   if direction==1:
    lines=[i for i in lines if i>pos]+[i for i in lines if i<pos]+[i for i in lines if i==pos]
    func="find"
   else:
-   lines=[i for i in lines if i<pos]+[i for i in lines if i>pos]+[i for i in lines if i==pos]
+   lines=[i for i in lines if i<pos][::-1]+[i for i in lines if i>pos][::-1]+[i for i in lines if i==pos]
    direction=-1
-  func="rfind"
+   func="rfind"
   for y in lines:
    for i in d[y][::direction]:
     if config.caseSensitiveSearch:
