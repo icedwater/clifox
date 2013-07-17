@@ -311,7 +311,7 @@ used, e.g. when reading a webpage as a whole document.
 #  log("target:",target)
   if target==None: return
   if type(target)!=tuple:
-   target=self.findElem(target)
+   target=self.getElementPosition(target)
   y,x,target=target
   self.showScreen(absoluteY=y,x=x)
   return target

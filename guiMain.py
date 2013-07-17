@@ -544,6 +544,12 @@ If said next text requires a line break, That line break will be attached to tha
   if elems:
    return elems[-1][-1]
 
+ def getElementPosition(self,n):
+  for yW in self._display:
+   x=[i for i in self._display[yW] if i[2]==n]
+   if x:
+    return yW,x[0][0],x[0][2]
+
  def findElement(self,tag="",attrs={},direction="forward"):
   """given a list of tags and an optional dictionary of attributes, search the dom tree for the requested tag(s).
 Pull all nodes as a list. Move through the list, skipping nodes whose position (physical or tree-logical) would preclude them from being candidates.
@@ -557,12 +563,14 @@ Return the first matching node.
   absoluteY=self.getScreenAbsolutePosition(screenNum=sn,y=y)
   if direction=="forward":
    for yW in xrange(absoluteY,max(self._display.keys())):
+    if yW not in self._display: continue
     for xW,text,elem in self._display[yW]:
      if yW==y and xW<=x: continue
      if elem.nodeName in tag:
       return yW,xW,elem
   else:
    for yW in xrange(absoluteY-1,0,-1):
+    if yW not in self._display: continue
     for xW,text,elem in self._display[yW][::-1]:
      if yW==y: continue
      if elem.nodeName in tag:
