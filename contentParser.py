@@ -9,6 +9,9 @@ class parser(object):
  spaces=re.compile("[\n\r\t ]+")
 
  def __init__(self,nodes,maxx=160):
+  """initialize parser
+supply a list of document elements to be rendered (e.g. from iterNodes)
+"""
   self.maxx=maxx
   self.lst=nodes
   self.funcCache={}
@@ -16,8 +19,9 @@ class parser(object):
   self.skip=self.SKIP_THIS
 
  def wrapText(self, text, width=None, indent=None):
+  """wraps text, respecting spacing and line breaks whenever possible
+"""
   width=self.maxx if width==None else width
-#  log("wrapToFit:",text,width,indent)
   start,end=0,0
   lines=[]
   textLength=len(text)
@@ -42,16 +46,18 @@ class parser(object):
   return lines
  
  def itemFunc(self,item):
+  """returns the function for handling an element, or self.unknown"""
   if item.nodeName in self.funcCache:
    return self.funcCache[item.nodeName]
   x=getattr(self,item.nodeName.lower().replace("#",""),self.unknown)
-#  log("item:",x)
   self.funcCache[item.nodeName]=x
   return x
 
  def endItemFunc(self,item):
+  """returns the function for ending an element or self.endUnknown
+This could be used, for example, to require new lines after headings."""
   try:
-   return self.funcCache[item.nodeName]
+   return self.endFuncCache[item.nodeName]
   except:
    n=item.nodeName
    x=getattr(self,"end"+n[0].upper()+n[1:].lower().replace("#",""),self.endUnknown)
@@ -59,6 +65,11 @@ class parser(object):
    return x
 
  def parse(self,start=0,end=-1):
+  """parse the supplied node list and return the result
+result is returned as {line:[[columnStart,lineNodeText,node],...]}
+columnStart shows where the text starts on each line.
+Text is wrapped, and ends for each line at columnStart+len(lineNodeText).
+"""
   self.labels=[]
 #dict([(i.control.ref.id,i.textContent) for i in self.lst if i.nodeName=="LABEL"])
   end=len(self.lst) if end==-1 else end
@@ -96,16 +107,20 @@ class parser(object):
    new=self.wrapText(text,self.maxx,self.x)
    if type(new)!=list:
     new=[new]
+   log("wrap:",new,self.y,self.x)
    while new:
     l=new.pop(0)
     if not self.ret.get(self.y,None):
      self.ret[self.y]=[]
     self.ret[self.y].append((self.x,l,self.lst[idx]))
     self.x+=len(l)
-    if new: self.y+=1; self.x=0
+    if new:
+     log("newLine from wrap")
+     self.y+=1; self.x=0
   return self.ret
 
  def getChildCount(self,idx):
+  """return the number of children below the supplied index"""
   num=self.lst[idx].num
   count=0
   idx+=1
@@ -120,6 +135,9 @@ class parser(object):
   return count
 
  def insertAndParse(self,where,new):
+  """untested
+insert and parse a chunk of new nodes.
+"""
   for i in self.lst:
    if i[2]<where:
     continue
@@ -130,6 +148,8 @@ class parser(object):
     self.parse(i[1],len(new))
 
  def getChildren(self,i):
+  """returns all children below the supplied index
+"""
   if type(i)!=int:
    i=self.lst.index(i)
   start=i
@@ -141,10 +161,14 @@ class parser(object):
    i+=1
   return ret
 
+ """This list holds the names of any elements that can be placed before other elements on a single line, regardless of the other elements types.
+Currently, only the LI, list item, tag is used here.
+This tag is so common and small that it can be placed before many other elements, such as links and buttons, without impacting the flow of a webpage.
+"""
  sameLinePreformatted=["LI"]
  def needNewLine(self,y=None,x=None):
   """find if there are elements on the current line that have text and where such text is not generated purely for element type
-for instance, this function would return false if one was scanning a line with a list item and a link, because the list item would show a "* ", which would mean that the link would not require a blank line.
+for instance, this function would return false if one was scanning a line with a list item and a link, because the list item would show a "* ", which would mean that the link would not require a new line.
 """
   y=self.y if y==None else y
   x=self.x if x==None else x
@@ -165,16 +189,21 @@ for instance, this function would return false if one was scanning a line with a
 
 class htmlParser(parser):
  def nl(self,idx):
+  """check if there is need for a line break because of existing text on the current line."""
   if self.needNewLine():
    self.y+=1
    self.x=0
 
- def fnl(self,idx):
-  self.y+=1
-  self.x=0
-  if self.y not in self.ret:
-   self.ret[self.y]=[]
-  self.ret[self.y].append((self.x,'',self.lst[idx]))
+ def fnl(self,idx,force=1):
+  """insert a new line regardless of other elements on the current line.
+For instance, this would be used for a br element, where a line break is mandatory.
+"""
+  if self.x!=0 or force==1:
+   self.y+=1
+   self.x=0
+#  if self.y not in self.ret:
+#   self.ret[self.y]=[]
+#  self.ret[self.y].append((self.x,'',self.lst[idx]))
 
  def div(self,idx):
   return ''
@@ -187,6 +216,16 @@ class htmlParser(parser):
  h4=h1
  h5=h1
  h6=h1
+
+ def endH1(self,idx):
+  if self.x!=0:
+   self.fnl(idx)
+  return ''
+ endH2=endH1
+ endH3=endH1
+ endH4=endH1
+ endH5=endH1
+ endH6=endH1
 
  def li(self,idx):
   self.nl(idx)
@@ -307,7 +346,7 @@ class htmlParser(parser):
   return ''
 
  def endA(self,idx):
-  self.fnl(idx)
+#  self.fnl(idx)
   return ''
 
  def img(self,idx,embedded=0):
@@ -339,7 +378,7 @@ class htmlParser(parser):
   if not t:
    t="submit"
   self.skip=self.SKIP_CHILDREN
-  t="["+t+"] "
+  t="[*"+t+"] "
   return t
 
  def getBlankLines(self,idx,maxCheck=2):
@@ -358,14 +397,13 @@ class htmlParser(parser):
   return '-'*40
 
  def br(self,idx):
-  self.nl(idx)
-  if self.getBlankLines(idx)<=2:
+  if self.getBlankLines(idx)<2:
    self.fnl(idx)
   return ''
 
  def p(self,idx):
-  self.nl(idx)
-  if self.getBlankLines(idx)<=1:
+  if self.getBlankLines(idx)<2:
+   self.fnl(idx)
    self.fnl(idx)
   return ''
 
