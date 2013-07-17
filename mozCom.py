@@ -758,8 +758,8 @@ repl.getDocJson=function(root,nocache)
 {
 var grabVars={
 "A":["textContent","href","title","name"],
-"INPUT":["title","type","value","checked","name","selectedIndex"],
-"BUTTON":["title","type","value","checked","name","textContent","selectedIndex"],
+"INPUT":["title","type","value","checked","name","disabled","alt","src"],
+"BUTTON":["title","type","value","checked","name","textContent","disabled"],
 "SELECT":["textContent","value","type","selectedIndex","disabled","name"],
 "IMG":["alt","src","title"],
 "LABEL":["control"]
