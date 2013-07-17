@@ -252,6 +252,15 @@ class htmlParser(parser):
  def inputButton(self,idx):
   return "[*"+self.lst[idx].value+"]"
 
+ def inputImage(self,idx):
+  i=self.lst[idx]
+  t=i.alt
+  if not t:
+   t=i.title
+  if not t:
+   t=i.src.rsplit("/",1)[-1]
+  return "[*"+t+"]"
+
  def inputCheckbox(self,idx):
   c="x" if self.lst[idx].checked else " "
   return "["+c+"]"
@@ -261,7 +270,7 @@ class htmlParser(parser):
   return "["+c+"]"
 
  def getInputName(self,idx):
-  if self.lst[idx].type.lower() in ("submit","button"):
+  if self.lst[idx].type.lower() in ("submit","button","image"):
    return ''
   n=self.lst[idx]
   if n.title:
