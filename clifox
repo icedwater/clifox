@@ -558,7 +558,7 @@ length: the maximum length for this text entry (element.attr=maxlength is the co
   d=self.getFocusedElement()
   if d==None:
    return None
-  log("onFocus:d="+str(d)+",parentNodeNames="+str(self.parentNodeNames(d)))
+#  log("onFocus:d="+str(d)+",parentNodeNames="+str(self.parentNodeNames(d)))
   if d.nodeName=="A":
    p=d
   elif d.nodeName in ("IFRAME","FRAME"):

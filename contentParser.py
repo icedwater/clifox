@@ -45,7 +45,7 @@ class parser(object):
   if item.nodeName in self.funcCache:
    return self.funcCache[item.nodeName]
   x=getattr(self,item.nodeName.lower().replace("#",""),self.unknown)
-  log("item:",x)
+#  log("item:",x)
   self.funcCache[item.nodeName]=x
   return x
 
@@ -59,7 +59,8 @@ class parser(object):
    return x
 
  def parse(self,start=0,end=-1):
-  self.labels=dict([(i.control,i.textContent) for i in self.lst if i.nodeName=="LABEL"])
+  self.labels=[]
+#dict([(i.control.ref.id,i.textContent) for i in self.lst if i.nodeName=="LABEL"])
   end=len(self.lst) if end==-1 else end
   self.ret={}
   open=[]
@@ -73,7 +74,7 @@ class parser(object):
 #our goal is to skip a certain number of children
 #we have heading,link,text; link says skip children; skip=1; skip=1 to skip=0; continue; we've passed the text leaf 
    if idx and self.lst[idx].num<=self.lst[idx-1].num:
-    log("idx:",idx,"open:",len(open))
+#    log("idx:",idx,"open:",len(open))
     rng=(self.lst[idx-1].num-self.lst[idx].num)+1
     close=[open.pop(-1) for iRng in xrange(rng)]
     [self.endItemFunc(self.lst[oC])(oC) for oC in close]
@@ -226,7 +227,9 @@ class htmlParser(parser):
   value=getattr(self,"input"+nt,self.inputUnknown)(idx)
   if self.lst[idx].disabled:
    nm="disabled "+nm
-  return "[%s] %s" % (nm,value,)
+  c=value
+  if nm: c="["+nm+"] "+c
+  return c
 
  def inputHidden(self,idx):
   return None
@@ -258,21 +261,25 @@ class htmlParser(parser):
   return "["+c+"]"
 
  def getInputName(self,idx):
-  if self.lst[idx].type in ("submit","button"):
+  if self.lst[idx].type.lower() in ("submit","button"):
    return ''
   n=self.lst[idx]
   if n.title:
    t=n.title
-  elif n in self.labels:
-   t=self.labels[n]
+  elif n.ref.id in self.labels:
+   t=self.labels[n.ref.id]
   else:
    t=n.name
   return t
 
  def a(self,idx,fromImg=0):
+  if self.lst[idx].name:
+#   self.skip=self.SKIP_CHILDREN
+   return ''
   self.nl(idx)
   n=self.lst[idx]
-  imgs=[i for i in self.getChildren(idx) if i.nodeName=="IMG"]
+  children=self.getChildren(idx)
+  imgs=[i for i in children if i.nodeName=="IMG"]
   if not imgs:
    if n.textContent:
     return "{} "
@@ -282,8 +289,10 @@ class htmlParser(parser):
     return "{"+n.href+"} "
   else:
    try:
-    return "{"+self.img(self.getChildren(imgs[0]),1).strip()+"}"
+    iidx=children.index(imgs[0])
+    t="{"+self.img(iidx+idx+1).strip()+"}"
     self.skip=self.SKIP_CHILDREN
+    return t
    except:
     pass
   return ''
@@ -295,6 +304,7 @@ class htmlParser(parser):
  def img(self,idx,embedded=0):
   if not embedded: self.nl(idx)
   i=self.lst[idx]
+#  log("img:",idx,i.nodeName,i.outerHTML)
   if i.alt:
    t=i.alt
   elif i.title:
@@ -332,6 +342,7 @@ class htmlParser(parser):
    y-=1
    t="".join([i[1].strip() for i in self.ret.get(y,[])])
    if not t: blank+=1
+   if t: return blank
   return blank
 
  def hr(self,idx):
