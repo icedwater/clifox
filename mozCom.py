@@ -341,6 +341,10 @@ n=root;
 i=0;
 while (n && (i==0 || n!=root))
 {
+if(num<0||num==0&&n!=root)
+{
+break;
+}
 i+=1;
 l.push([n,num]);
 if (n.firstChild)
@@ -812,7 +816,7 @@ w=this.getDomList(root);
 ll=w.length;
 ww=[];
 skip=-1;
-cs=root.defaultView.getComputedStyle;
+cs=root.defaultView?root.defaultView.getComputedStyle:root.ownerDocument.defaultView.getComputedStyle;
 for(var i=0;i<ll;i++)
 {
 if(skip!=-1&&w[i][1]>skip)
