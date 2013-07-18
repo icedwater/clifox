@@ -46,56 +46,6 @@ class ActiveWindow(guiMain.gui):
  """Manages the active window (the single set of screens available to the user for one webpage)
 similar in concept to a tab in Firefox
 """
- def acc(self):
-  self.ar=self.js.Components.classes["@mozilla.org/accessibleRetrieval;1"].getService(self.js.Components.interfaces.nsIAccessibleRetrieval)
-  self.ad=self.ar.getAccessibleFor(self.dom.document)
- def getStates(self,n):
-  if not n or not n.getState: return ""
-  self.js.d={}
-  self.js.e={}
-  n.getState(self.js.d,self.js.e)
-  ss=self.ar.getStringStates(self.js.d.value,self.js.e.value)
-  ret=[ss.item(i) for i in xrange(ss.length)]
-  return " ".join(ret)
- def getAMap(self,n):
-  root=n
-  l=[]
-  i=0
-  while (n!=None and (i==0 or n!=root)):
-   i+=1
-   l.append(n)
-   try:
-    if n.firstChild:
-     n=n.firstChild
-     continue
-    if n.nextSibling:
-     n=n.nextSibling
-     continue
-   except:
-    pass
-   while n!=root:
-    try:
-     ns=n.nextSibling
-    except:
-     ns=None
-    if n and not ns:
-     n=n.parent
-    else:
-     break
-   if not n:
-    break
-   n=n.nextSibling
-  return l
- def getAList(self,n):
-  l=self.getAMap(n)
-  t=[(i,self.ar.getStringRole(i.role),i.name,i.value,i.description,self.getStates(i)) for i in l]
-  t=[[i if i!=None else '' for i in j] for j in t]
-  return t
- def al(self):
-  self.acc()
-  ret=self.getAList(self.ad)
-  self.dom.document.body.innerHTML="<br/>".join([", ".join(i[1:]) for i in ret])
-
  def printStructure(self,x):
   output=""
   for i in x:
@@ -899,13 +849,6 @@ length: the maximum length for this text entry (element.attr=maxlength is the co
    force=1
   self.doPaint(force)
 
- def doAccPaint(self):
-  b=time.time()
-  self.p=parser(self.getAcc(self.dom.document))
-  self.p.parse()
-  c=time.time()
-  log("accessiblePainted, time %s" % (str(c-b),))
-
  def doPaint(self,paint=0):
   a=time.time()
   if paint:
@@ -916,7 +859,6 @@ length: the maximum length for this text entry (element.attr=maxlength is the co
   else:
    log("painted from cache")
   b=time.time()
-#self.doAccPaint()
   log("painted, time %s." % (str(b-a),))
   self.showScreen(force=1)
 
