@@ -217,6 +217,10 @@ jsRoot points to the root class of js
    except:
     pass
 
+ def mutation(self,e):
+  self.setStatus("")
+  self.setStatus(str(len(e)))
+
  def tabSelect(self,e):
   """firefox fires eventon tab switch"""
   log("tabSelect")

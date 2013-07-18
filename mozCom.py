@@ -205,7 +205,7 @@ class JSReference(object):
      log("event:"+repr(ret))
      raise Exception("js/"+ret['a'][0])
 #an event popped up, stick it in the q.
-    if ret['m'] in ("w","e","E"):
+    if ret['m'] in ("w","e","E","ec"):
      if ret['m'] in ("e","E"):
       x=JSClass(name=ret['t'],id=ret['a'][0],parent=None,root=self.root)
       self.map[x.ref.id]=x
@@ -721,8 +721,17 @@ repl.notifyMutations=function(records,observer)
 {
 if(gBrowser.selectedTab.linkedBrowser.contentWindow==observer.window)
 {
-var t={"records":records,"obs":observer};
-repl.print({"m":"e","a":[repl.addMap(t)],"t":"mutation"});
+var r=[];
+var t=[];
+for(var i=0;i<records.length;i++)
+{
+if(t.indexOf(records[i].target)<0)
+{
+r.push(repl.getDocJson(records[i].target));
+t.push(records[i].target);
+}
+}
+repl.print(JSON.stringify({"m":"ec","a":[r],"t":"mutation","i":""}));
 }
 }
 repl.mutationObsObj={
@@ -758,7 +767,7 @@ w.mo=null;
 }
 }
 };
-repl.getDocJson=function(root,nocache)
+repl.getDocJson=function(root,func)
 {
 var grabVars={
 "A":["textContent","href","title","name"],
@@ -799,13 +808,16 @@ a.push(n[gv[i]]);
 }
 return a;
 };
-var func;
+//var func;
 var ids={};
+if(!func)
+{
 if(repl.inMap(root.firstChild)!=null && repl.inMap(root.lastChild)!=null)
 {
 func=repl.addMap;
 } else {
 func=repl.justAddMap;
+}
 }
 //comment this out?
 //func=repl.justAddMap;
