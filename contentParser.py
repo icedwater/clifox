@@ -134,18 +134,19 @@ Text is wrapped, and ends for each line at columnStart+len(lineNodeText).
     break
   return count
 
- def insertAndParse(self,where,new):
+ def insertAndParse(self,nodes):
   """untested
 insert and parse a chunk of new nodes.
+assume nodes[0] is a node currently in self.lst
 """
-  for i in self.lst:
-   if i[2]<where:
-    continue
-   if i[1]>where:
-    break
-   if i[1]==where:
-    [self.lst.insert(i[1],j) for j in new[::-1]]
-    self.parse(i[1],len(new))
+  try:
+   idx=self.index(nodes[0])
+  except Exception,e:
+   raise Exception("given node is not in index")
+  old=self.getChildCount(idx)
+  [self.lst.pop(idx) for _ in range(old+1)]
+  [self.lst.insert(idx,i) for i in nodes[::-1]]
+  self.parse()
 
  def getChildren(self,i):
   """returns all children below the supplied index
