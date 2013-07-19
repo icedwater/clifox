@@ -1,4 +1,4 @@
-import os,sys,select,socket,time,Queue,urllib
+import os,sys,select,socket,time,Queue,urllib,configParser
 try:
  try:
   import json
@@ -7,7 +7,10 @@ try:
 except:
  print("Either the JSON or simplejson module needs to be installed. Data is passed from Firefox to Python using the JSON format.")
  sys.exit(1)
-dbg=0
+try:
+ dbg=configParser.config.dbg
+except:
+ dbg=0
 dbgl=[]
 from utils import log
 true=True
@@ -339,6 +342,7 @@ num=0;
 l=[];
 n=root;
 i=0;
+var frames=[];
 while (n && (i==0 || n!=root))
 {
 if(num<0||num==0&&n!=root)
@@ -347,6 +351,14 @@ break;
 }
 i+=1;
 l.push([n,num]);
+if (n.nodeName=="iframe"||n.nodeName=="frame")
+{
+frames.push(n.contentDocument);
+frames.push(n);
+n=n.contentDocument;
+num+=1;
+continue;
+}
 if (n.firstChild)
 {
 n=n.firstChild;
@@ -360,7 +372,12 @@ continue;
 }
 while (n && !n.nextSibling)
 {
+if (n.nodeName=="#document"&&frames.indexOf(n)>-1)
+{
+n=frames[frames.indexOf(n)+1];
+} else {
 n=n.parentNode;
+}
 num-=1;
 //if (endings && n){
 //l.push([0,n]);
