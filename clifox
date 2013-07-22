@@ -84,7 +84,7 @@ jsRoot points to the root class of js
   self.start_url=start_url
   self.codeHist=[]
   self.events=[]
-  self.local_vars="numLines,_display,nodes,nodes_flat,screenNum,screenPos,screenPosX,url".split(",")
+  self.local_vars="numLines,_display,nodes,parser,screenNum,screenPos,screenPosX,url".split(",")
   self.jsQ=jsQ
   self.js=jsRoot
   self.keys=config.mainWindowKeys
@@ -846,7 +846,7 @@ length: the maximum length for this text entry (element.attr=maxlength is the co
    [setattr(self,k,v) for k,v in self.windowVars[w].items() if k in self.local_vars]
   else:
    self.initVars()
-   force=1
+  force=1
   self.doPaint(force)
 
  def doPaint(self,paint=0):
