@@ -388,7 +388,7 @@ class gui(forms):
   self.dom.document.ref.vars['parentNode']=None
   try:
    nodes=self.iterNodes(self.dom.document)
-   p=contentParser.htmlParser(nodes)
+   p=contentParser.htmlParser(nodes,self.maxx)
    self._display=p.parse()
    self.numLines=max(self._display.keys())
   except Exception,e:
