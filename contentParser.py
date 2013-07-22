@@ -8,7 +8,7 @@ class parser(object):
  SKIP_CHILDREN=-1
  spaces=re.compile("[\n\r\t ]+")
 
- def __init__(self,nodes,maxx=160):
+ def __init__(self,nodes,maxx):
   """initialize parser
 supply a list of document elements to be rendered (e.g. from iterNodes)
 """
