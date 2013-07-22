@@ -23,26 +23,26 @@ supply a list of document elements to be rendered (e.g. from iterNodes)
 """
   width=self.maxx if width==None else width
   start,end=0,0
-  lines=[]
-  textLength=len(text)
   if indent!=None:
    end=width-indent
   else:
    end=width
-  if textLength<end:
-   lines.append(text)
-   return lines
-  while end<textLength:
-   if text[end]==' ':
-    lines.append(text[start:end])
-    start=end+1
-    end=start+width
-   if end==start:
-    lines.append(text[start:start+width])
-    start=start+width
-    end=start+width
-   end-=1
-  lines.append(text[start:])
+#  log("beforeWhile:","end:",end,"textLength:",textLength)
+  if len(text)<end:
+   return [text]
+  lines=[]
+  while text:
+   if len(text)<end:
+    lines.append(text)
+    break
+   where=text[:end].rfind(" ")
+   if where>-1:
+    t,text=text[:where],text[where:]
+    lines.append(t)
+   else:
+    t,text=text[:end],text[end:]
+    lines.append(t)
+   end=width
   return lines
  
  def itemFunc(self,item):
@@ -107,11 +107,11 @@ Text is wrapped, and ends for each line at columnStart+len(lineNodeText).
    new=self.wrapText(text,self.maxx,self.x)
    if type(new)!=list:
     new=[new]
-   log("wrap:",new,self.y,self.x)
    while new:
     l=new.pop(0)
     if not self.ret.get(self.y,None):
      self.ret[self.y]=[]
+    l=l.strip() if self.x==0 else l
     self.ret[self.y].append((self.x,l,self.lst[idx]))
     self.x+=len(l)
     if new:
@@ -134,18 +134,19 @@ Text is wrapped, and ends for each line at columnStart+len(lineNodeText).
     break
   return count
 
- def insertAndParse(self,where,new):
+ def insertAndParse(self,nodes):
   """untested
 insert and parse a chunk of new nodes.
+assume nodes[0] is a node currently in self.lst
 """
-  for i in self.lst:
-   if i[2]<where:
-    continue
-   if i[1]>where:
-    break
-   if i[1]==where:
-    [self.lst.insert(i[1],j) for j in new[::-1]]
-    self.parse(i[1],len(new))
+  try:
+   idx=self.index(nodes[0])
+  except Exception,e:
+   raise Exception("given node is not in index")
+  old=self.getChildCount(idx)
+  [self.lst.pop(idx) for _ in range(old+1)]
+  [self.lst.insert(idx,i) for i in nodes[::-1]]
+  self.parse()
 
  def getChildren(self,i):
   """returns all children below the supplied index
@@ -348,6 +349,9 @@ For instance, this would be used for a br element, where a line break is mandato
  def endA(self,idx):
 #  self.fnl(idx)
   return ''
+
+ def endImg(self,idx):
+  self.fnl(idx)
 
  def img(self,idx,embedded=0):
   if not embedded: self.nl(idx)
