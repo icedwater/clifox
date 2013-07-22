@@ -337,12 +337,12 @@ return l;
 Array.prototype.indexOf=(function(obj){var idx=this.length;do{if(this[idx]==obj){return idx;};idx--;} while(idx>=0);return -1;});
 repl.getDomList=function(root,endings)
 {
-var n,l,i,num;
+var n,l,i,num,nn,frames;
 num=0;
 l=[];
 n=root;
 i=0;
-var frames=[];
+frames=[];
 while (n && (i==0 || n!=root))
 {
 if(num<0||num==0&&n!=root)
@@ -351,7 +351,8 @@ break;
 }
 i+=1;
 l.push([n,num]);
-if (n.nodeName=="iframe"||n.nodeName=="frame")
+nn=n.nodeName.toLowerCase();
+if (nn=="iframe"||nn=="frame")
 {
 frames.push(n.contentDocument);
 frames.push(n);
@@ -838,14 +839,13 @@ func=repl.justAddMap;
 }
 //comment this out?
 //func=repl.justAddMap;
-var atime,w,l,cur,ll,ww,skip,cs;
+var atime,w,l,cur,ll,ww,skip,cs,cst,tt,nn;
 l=[];
 atime=repl.time();
 w=this.getDomList(root);
 ll=w.length;
 ww=[];
 skip=-1;
-cs=root.defaultView?root.defaultView.getComputedStyle:root.ownerDocument.defaultView.getComputedStyle;
 for(var i=0;i<ll;i++)
 {
 if(skip!=-1&&w[i][1]>skip)
@@ -856,18 +856,22 @@ if(skip!=-1)
 {
 skip=-1;
 }
-var cst,tt;
 tt=w[i][0];
+cs=tt.defaultView?tt.defaultView.getComputedStyle:tt.ownerDocument.defaultView.getComputedStyle;
 //if(tt.offsetWidth==0&&tt.offsetHeight==0)
 //{
 try{cst=cs(tt);}catch(e){cst=null;};
 //cst=null;
 //var elems=["LI","UL"];
+nn=tt.nodeName.toLowerCase();
+//if(nn!="iframe"&&nn!="frame"&&nn!="#document")
+//{
 if (cst&&(cst.visibility=='hidden'||cst.display=='none'))
 {
 skip=w[i][1];
 continue;
 }
+//}
 //}
 ww.push(w[i]);
 }
