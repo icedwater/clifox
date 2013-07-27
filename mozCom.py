@@ -1,4 +1,4 @@
-import os,sys,select,socket,time,Queue,urllib
+import os,sys,select,socket,time,Queue,urllib,configParser
 try:
  try:
   import json
@@ -7,7 +7,10 @@ try:
 except:
  print("Either the JSON or simplejson module needs to be installed. Data is passed from Firefox to Python using the JSON format.")
  sys.exit(1)
-dbg=0
+try:
+ dbg=configParser.config.dbg
+except:
+ dbg=0
 dbgl=[]
 from utils import log
 true=True
@@ -205,7 +208,7 @@ class JSReference(object):
      log("event:"+repr(ret))
      raise Exception("js/"+ret['a'][0])
 #an event popped up, stick it in the q.
-    if ret['m'] in ("w","e","E"):
+    if ret['m'] in ("w","e","E","ec"):
      if ret['m'] in ("e","E"):
       x=JSClass(name=ret['t'],id=ret['a'][0],parent=None,root=self.root)
       self.map[x.ref.id]=x
@@ -334,15 +337,29 @@ return l;
 Array.prototype.indexOf=(function(obj){var idx=this.length;do{if(this[idx]==obj){return idx;};idx--;} while(idx>=0);return -1;});
 repl.getDomList=function(root,endings)
 {
-var n,l,i,num;
+var n,l,i,num,nn,frames;
 num=0;
 l=[];
 n=root;
 i=0;
+frames=[];
 while (n && (i==0 || n!=root))
 {
+if(num<0||num==0&&n!=root)
+{
+break;
+}
 i+=1;
 l.push([n,num]);
+nn=n.nodeName.toLowerCase();
+if (nn=="iframe"||nn=="frame")
+{
+frames.push(n.contentDocument);
+frames.push(n);
+n=n.contentDocument;
+num+=1;
+continue;
+}
 if (n.firstChild)
 {
 n=n.firstChild;
@@ -356,7 +373,12 @@ continue;
 }
 while (n && !n.nextSibling)
 {
+if (n.nodeName=="#document"&&frames.indexOf(n)>-1)
+{
+n=frames[frames.indexOf(n)+1];
+} else {
 n=n.parentNode;
+}
 num-=1;
 //if (endings && n){
 //l.push([0,n]);
@@ -717,8 +739,17 @@ repl.notifyMutations=function(records,observer)
 {
 if(gBrowser.selectedTab.linkedBrowser.contentWindow==observer.window)
 {
-var t={"records":records,"obs":observer};
-repl.print({"m":"e","a":[repl.addMap(t)],"t":"mutation"});
+var r=[];
+var t=[];
+for(var i=0;i<records.length;i++)
+{
+if(t.indexOf(records[i].target)<0)
+{
+r.push(repl.getDocJson(records[i].target));
+t.push(records[i].target);
+}
+}
+repl.print(JSON.stringify({"m":"ec","a":[r],"t":"mutation","i":""}));
 }
 }
 repl.mutationObsObj={
@@ -754,7 +785,7 @@ w.mo=null;
 }
 }
 };
-repl.getDocJson=function(root,nocache)
+repl.getDocJson=function(root,func)
 {
 var grabVars={
 "A":["textContent","href","title","name"],
@@ -795,24 +826,26 @@ a.push(n[gv[i]]);
 }
 return a;
 };
-var func;
+//var func;
 var ids={};
+if(!func)
+{
 if(repl.inMap(root.firstChild)!=null && repl.inMap(root.lastChild)!=null)
 {
 func=repl.addMap;
 } else {
 func=repl.justAddMap;
 }
+}
 //comment this out?
 //func=repl.justAddMap;
-var atime,w,l,cur,ll,ww,skip,cs;
+var atime,w,l,cur,ll,ww,skip,cs,cst,tt,nn;
 l=[];
 atime=repl.time();
 w=this.getDomList(root);
 ll=w.length;
 ww=[];
 skip=-1;
-cs=root.defaultView.getComputedStyle;
 for(var i=0;i<ll;i++)
 {
 if(skip!=-1&&w[i][1]>skip)
@@ -823,18 +856,22 @@ if(skip!=-1)
 {
 skip=-1;
 }
-var cst,tt;
 tt=w[i][0];
+cs=tt.defaultView?tt.defaultView.getComputedStyle:tt.ownerDocument.defaultView.getComputedStyle;
 //if(tt.offsetWidth==0&&tt.offsetHeight==0)
 //{
 try{cst=cs(tt);}catch(e){cst=null;};
 //cst=null;
 //var elems=["LI","UL"];
+nn=tt.nodeName.toLowerCase();
+//if(nn!="iframe"&&nn!="frame"&&nn!="#document")
+//{
 if (cst&&(cst.visibility=='hidden'||cst.display=='none'))
 {
 skip=w[i][1];
 continue;
 }
+//}
 //}
 ww.push(w[i]);
 }
