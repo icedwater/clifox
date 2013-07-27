@@ -379,13 +379,6 @@ class gui(forms):
   w=self.maxx
   self.y,self.x=0,0
 #  log("nodes from doc:"+str(self.dom.document))
-  self.dom.document.ref.vars['_flags_skip']=0
-  for k in "nodeName,tagName,nodeValue".split(","):
-   try:
-    self.dom.document.ref.vars[k]=self.dom.document[k]
-   except:
-    self.dom.document.ref.vars[k]=None
-  self.dom.document.ref.vars['parentNode']=None
   try:
    nodes=self.iterNodes(self.dom.document)
    self.parser=contentParser.htmlParser(nodes,self.maxx)
@@ -428,26 +421,25 @@ class gui(forms):
 #  return rootNode
 
  def showScreen(self,screenNum=None,y=None,absoluteY=None,x=None,force=0):
-  self.writeScreenCoordsToFile()
-  _absoluteY=absoluteY
-  _screenNum=screenNum
+  x=self.screenPosX if x==None else x
   if absoluteY==None:
+   y=self.screenPos if y==None else y
    screenNum=self.screenNum if screenNum==None else screenNum
-   y=self.screen.getyx()[0] if y==None else y
+   absoluteY=self.getScreenAbsolutePosition(screenNum=screenNum,y=y)
   else:
    absoluteY=absoluteY
    screenNum=self.getScreenNumber(absoluteY)
    y=self.getLineNumber(absoluteY)
-  absoluteY=self.getScreenAbsolutePosition(screenNum=screenNum,y=0)
-  x=self.screen.getyx()[1] if x==None else x
-  log("showScreen:",absoluteY,screenNum,y,x)
-  if _screenNum==self.screenNum and force==0:
+  self.writeScreenCoordsToFile()
+  log("showScreen:","absoluteY:",absoluteY,"x:",x,"screen:",screenNum,"y:",y)
+  if screenNum==self.screenNum and force==0:
    self.screenPos,self.screenPosX=y,x
-   log("showScreen:just refreshing and moving. _screenNum=%s, screenNum=%s, y=%s, x=%s" % (str(_screenNum),str(self.screenNum),str(y),str(x),))
+   log("showScreen:just refreshing and moving.")
    self.screen.move(self.screenPos,self.screenPosX)
    self.screen.refresh()
    self.onFocus()
    return
+  absoluteY-=y
   self.screen.clear()
   low,high=absoluteY,absoluteY+self.maxy
   yW=0
