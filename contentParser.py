@@ -171,10 +171,10 @@ This tag is so common and small that it can be placed before many other elements
   """find if there are elements on the current line that have text and where such text is not generated purely for element type
 for instance, this function would return false if one was scanning a line with a list item and a link, because the list item would show a "* ", which would mean that the link would not require a new line.
 """
-  y=self.y if y==None else y
   x=self.x if x==None else x
   if x==0:
    return 0
+  y=self.y if y==None else y
   elems=self.ret.get(y,[])
   if not elems:
    return 0
@@ -195,7 +195,7 @@ class htmlParser(parser):
    self.y+=1
    self.x=0
 
- def fnl(self,idx,force=1):
+ def fnl(self,idx,force=0):
   """insert a new line regardless of other elements on the current line.
 For instance, this would be used for a br element, where a line break is mandatory.
 """
@@ -257,6 +257,18 @@ For instance, this would be used for a br element, where a line break is mandato
   if nm: c="["+nm+"] "+c
   return c
 
+ def endSelect(self,idx):
+  self.fnl(idx)
+  return ''
+
+ def form(self,idx):
+  self.fnl(idx)
+  return ''
+
+ def endForm(self,idx):
+  self.fnl(idx)
+  return ''
+
  def input(self,idx):
   nm=self.getInputName(idx)
   if nm==None:
@@ -270,6 +282,10 @@ For instance, this would be used for a br element, where a line break is mandato
   c=value
   if nm: c="["+nm+"] "+c
   return c
+
+ def endInput(self,idx):
+  self.fnl(idx)
+  return ''
 
  def inputHidden(self,idx):
   return None
@@ -319,6 +335,8 @@ For instance, this would be used for a br element, where a line break is mandato
    t=self.labels[n.ref.id]
   else:
    t=n.name
+  if not t:
+   t="unlabeled"
   return t
 
  def a(self,idx,fromImg=0):
