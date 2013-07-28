@@ -79,6 +79,7 @@ jsQ points to the queue where JS generated events are sent
 jsRoot points to the root class of js
 """
   log("thread:init:activeWindow")
+  self.statusbar=1
   self.lastMessage=""
   self.daemon=1
   self.start_url=start_url
@@ -168,6 +169,7 @@ jsRoot points to the root class of js
     pass
 
  def mutation(self,e):
+  return
   self.setStatus("")
   self.setStatus(str(len(e)))
 
@@ -234,7 +236,7 @@ now we display the webpage by scanning the nodes for text, and displaying that t
   b=time.time()
   log("painted, time %s" % (str(b-a),))
   self.setStatus("showing screen")
-  self.showScreen(screenNum=0,y=0,force=1)
+  self.showScreen(absoluteY=0,force=1)
   self.htmlHttpCommands()
 
  def htmlHttpCommands(self):
@@ -246,9 +248,7 @@ now we display the webpage by scanning the nodes for text, and displaying that t
 toggles status bar (the bottom line of the window) to prevent text from changing the window state.
 used, e.g. when reading a webpage as a whole document.
 """
-  if not hasattr(self,"statusbar"):
-   self.statusbar=1
-  self.statusbar=-1*self.statusbar
+  self.statusbar=0 if self.statusbar==1 else 1
  
  def nextLink(self,*args):
    x=self.moveToElem(self.findElement("A",direction="forward"))
@@ -259,7 +259,7 @@ used, e.g. when reading a webpage as a whole document.
   log("prevLink,%d,%d,%d" % (self.screenNum,self.screenPos,self.screenPosX,))
 
  def jumpToLine(self,lineNumber):
-  self.showScreen(y=self.getLineNumber(lineNumber),screenNum=self.getScreenNumber(lineNumber))
+  self.showScreen(absoluteY=lineNumber-1)
 
  def moveToElem(self,target):
 #  log("target:",target)
@@ -580,6 +580,7 @@ length: the maximum length for this text entry (element.attr=maxlength is the co
   return 0 if e.dispatchEvent(evt) else 1
 
  def handleFormInput(self,element):
+  sn,y,x=self.screenNum,self.screenPos,self.screenPosX
   log("handleFormInput",element)
   e=element
   baseForm=e.form
@@ -602,13 +603,12 @@ length: the maximum length for this text entry (element.attr=maxlength is the co
    log("form:",e.value)
   elif e.nodeName=="INPUT" and e.type=="text":
    ret=self.prompt(default=e.value)
-#self.gEditbox(default=e.value)
    e.value=ret
   elif e.nodeName=="INPUT" and e.type=="password":
    ret=self.prompt(default=e.value,echo="*")
    e.value=ret
   elif e.nodeName=="TEXTAREA":
-   ret=self.gEditbox(default=e.textContent)
+   ret=self.prompt(default=e.textContent)
    e.innerHTML=ret
   elif e.nodeName=="INPUT" and e.type=="radio":
 #   self.setStatus("HFI:radio button")
@@ -626,10 +626,10 @@ length: the maximum length for this text entry (element.attr=maxlength is the co
    ret=self.gCheckbox(title=e.name,values=[e.name],checked=e.checked)
    e.checked=ret
   else:
-   ret=self.gEditbox(default=e.value,type=e.type)
+   ret=self.prompt(default=e.value)
    e.value=ret
   self.paintScreen()
-  self.showScreen()
+  self.showScreen(screenNum=sn,y=y,x=x,force=1)
 
  def onPositionChange(self):
   self.onFocus()
@@ -722,7 +722,7 @@ length: the maximum length for this text entry (element.attr=maxlength is the co
     self.screenPos=0
     self.screenPosX=0
     self.screen.move(self.screenPos,self.screenPosX)
-    self.showScreen()
+    self.showScreen(force=1)
     self.screen.refresh()
     log("nextScreen",self.screenNum,self.screenPos)
   else:
@@ -739,7 +739,7 @@ length: the maximum length for this text entry (element.attr=maxlength is the co
      self.screenNum-=1
      self.screenPos=self.maxy
      self.screenPosX=len(self.getLineText().strip())
-     self.showScreen()
+     self.showScreen(force=1)
      self.screen.move(self.screenPos,self.screenPosX)
      self.screen.refresh()
      log("prevScreen",self.screenNum,self.screenPos)
@@ -764,7 +764,7 @@ length: the maximum length for this text entry (element.attr=maxlength is the co
     self.screenNum=0
     self.screenPos=0
     self.screenPosX=0
-    self.showScreen()
+    self.showScreen(force=1)
   self.topOfScreen()
   log("topOfPage",self.screenPos,self.screenNum)
 
@@ -773,7 +773,7 @@ length: the maximum length for this text entry (element.attr=maxlength is the co
      self.bottomOfScreen()
    else:
      self.screenNum=self.numLines/self.maxy
-     self.showScreen()
+     self.showScreen(force=1)
      self.bottomOfScreen()
      log("bottomOfPage",self.screenPos,self.screenNum)
 
@@ -805,6 +805,7 @@ length: the maximum length for this text entry (element.attr=maxlength is the co
   self.setStatus(*args,**kw)
 
  def setStatus(self,txt,*l):
+  if not self.statusbar: return
   if isinstance(txt,list): txt=",".join([str(i).strip() for i in txt])
   if l: txt+=" "+" ".join(l)
   if not isinstance(txt,str): txt=str(txt)
