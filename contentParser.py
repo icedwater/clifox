@@ -253,7 +253,7 @@ For instance, this would be used for a br element, where a line break is mandato
     v=n.options[0].textContent
   else:
    v=n.options[0].textContent
-  c=v
+  c=v if v else ''
   if nm: c="["+nm+"] "+c
   return c
 
