@@ -611,6 +611,14 @@ repl.print('{"m":"w","a":["Welcome. Please enter JSON strings."]}');
 },
 
 onStop: function(repl) {
+for(var id in repl.map)
+{
+try
+{
+repl.map[id].value['$repl']=null;
+} catch(e) {
+}
+}
 for(var i=0;i<repl.killers.length;i++)
 {
 try
@@ -763,7 +771,7 @@ throw new Error(e);
 //getattr
 if (obj.m=='g')
 {
-//repl.print("#checking for id "+obj.i.toString());
+//repl.print({"m":"w","a":[Object.keys(repl.map).toString(),"#checking for id "+obj.i.toString()],"i":""});
 var o,_id,name,v,id,x;
 if (obj.i in repl.map)
 {

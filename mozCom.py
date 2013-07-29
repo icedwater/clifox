@@ -401,11 +401,17 @@ repl.findAllInMap=function(parent){var i,ret;ret=[];for(i=repl.map.length-1;i>=0
 repl.inMap=function(obj)
 {
 var where,i;
+where=obj['$repl'];
+//repl.print({"m":"w","a":["inMap",obj.toString()]});
+if (where)
+{
+return where;
+}
 where=repl.mapObjList.indexOf(obj);
 if(where>-1)
 {
 return repl.mapIdList[where];
-};
+}
 return null;
 };
 repl.addMap=function(obj,opts)
@@ -421,14 +427,32 @@ return repl.justAddMap(obj,opts);
 };
 repl.justAddMap=function(obj,opts)
 {
-var i,parent,name;
+var d,i,parent,name;
 i=repl.genid();
 opts=opts?opts:{};
 parent=opts.parent?opts.parent:null;
 name=opts.name?opts.name:"";
-repl.map[i]={"parent":parent,"id":i,"value":obj,"type":typeof(obj),"name":name};
+d={"parent":parent,"id":i,"value":obj,"type":typeof(obj),"name":name};
+repl.map[i]=d;
+//repl.map[i]=d;
+flag=0;
+try
+{
+obj['$repl']=i;
+if(!obj['$repl'])
+{
+flag=1;
+}
+} catch(e) {
+flag=1;
+}
+if(flag==1)
+{
 repl.mapIdList.push(i);
 repl.mapObjList.push(obj);
+}
+//repl.mapIdList.push(i);
+//repl.mapObjList.push(obj);
 return i;
 };
 repl._loadHandler = function(e) {try{if(e.target.nodeName=="#document"&&e.target.location.href!="about:blank"){};repl.print({"m":"e","t":e.type,"a":[repl.addMap(e)]});}catch(e){repl.print({"m":"w","a":["error:"+e.toString()]});};};
