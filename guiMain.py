@@ -554,16 +554,15 @@ Return the first matching node.
   y,x,sn=self.screenPos,self.screenPosX,self.screenNum
   absoluteY=self.getScreenAbsolutePosition(screenNum=sn,y=y)
   if direction=="forward":
-   for yW in xrange(absoluteY,max(self._display.keys())):
+   for yW in xrange(absoluteY,max(self._display.keys())+1):
     if yW not in self._display: continue
     for xW,text,elem in self._display[yW]:
-     if yW==y and xW<=x: continue
+     if yW==absoluteY and xW<=x: continue
      if elem.nodeName in tag:
       return yW,xW,elem
   else:
    for yW in xrange(absoluteY-1,0,-1):
     if yW not in self._display: continue
     for xW,text,elem in self._display[yW][::-1]:
-     if yW==y: continue
      if elem.nodeName in tag:
       return yW,xW,elem
