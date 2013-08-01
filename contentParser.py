@@ -120,18 +120,6 @@ Text is wrapped, and ends for each line at columnStart+len(lineNodeText).
    new=self.wrapText(text,self.maxx,self.x,self.inPre)
    if type(new)!=list:
     new=[new]
-   if self.inPre>0:
-    c=0
-    t=[]
-    for p in new:
-     if not p.strip():
-      c+=1
-      if c<=2: continue
-     if c>2:
-      c=0
-      continue
-     t.append(p)
-    new=t
    while new:
     l=new.pop(0)
     if not self.ret.get(self.y,None):
