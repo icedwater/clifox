@@ -18,8 +18,8 @@ false=False
 null=None
 
 class JSClass(object):
- def __init__(self,name="",value="",id="",root=0,parent=None,type="object",q=None,vars={},hostname="localhost"):
-  self.ref=JSReference(name=name,value=value,id=id,root=root,parent=parent,type=type,q=q,vars=vars,hostname=hostname,proxy=self)
+ def __init__(self,name="",value="",id="",root=0,parent=None,type="object",q=None,vars={},hostname="localhost",port=4242):
+  self.ref=JSReference(name=name,value=value,id=id,root=root,parent=parent,type=type,q=q,vars=vars,hostname=hostname,port=port,proxy=self)
 #getattr/setattr
 #if x is ref, then do object.__method__(self,x)
 
@@ -147,7 +147,7 @@ class JSClass(object):
    return a
 
 class JSReference(object):
- def __init__(self,name="",value="",id="",root=0,parent=None,type="object",q=None,vars={},hostname="localhost",proxy=None):
+ def __init__(self,name="",value="",id="",root=0,parent=None,type="object",q=None,vars={},hostname="localhost",port=4242,proxy=None):
   self.id=id
   self.idh=self.id.__hash__()
   self.proxy=proxy
@@ -164,7 +164,7 @@ class JSReference(object):
    self.map={}
    self.rMap={}
    self.sock=socket.socket(socket.AF_INET,socket.SOCK_STREAM)
-   self.sock.connect((hostname,4242))
+   self.sock.connect((hostname,port))
    self.data=""
    self.eventQ=q
   else:
@@ -306,10 +306,10 @@ def delMapKey(m,k):
   del m[k]
  return list(l)
 
-def initCliFox(hostname="localhost",q=None,js=None,ignoreErrors=0):
+def initCliFox(hostname="localhost",port=4242,q=None,js=None,ignoreErrors=0):
  if js==None: js=mzjs
  eventQ=Queue.Queue() if not q else q
- j=JSClass(name="this",value=None,id="jthis",root=0,q=eventQ,hostname=hostname)
+ j=JSClass(name="this",value=None,id="jthis",root=0,q=eventQ,hostname=hostname,port=port)
  try:
   j.ref.eval(js)
  except Exception,e:
