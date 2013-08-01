@@ -17,8 +17,9 @@ supply a list of document elements to be rendered (e.g. from iterNodes)
   self.funcCache={}
   self.endFuncCache={}
   self.skip=self.SKIP_THIS
+  self.inPre=0
 
- def wrapText(self, text, width=None, indent=None):
+ def wrapText(self, text, width=None, indent=None,pre=0):
   """wraps text, respecting spacing and line breaks whenever possible
 """
   width=self.maxx if width==None else width
@@ -32,6 +33,14 @@ supply a list of document elements to be rendered (e.g. from iterNodes)
    return [text]
   lines=[]
   while text:
+   if pre>0:
+    where=text.find("\n")
+    log("text:",len(text),repr(text),where)
+    if where>-1 and where<end:
+     t,text=text[:where],text[where+1:]
+     lines.append(t)
+     end=width
+     continue
    if len(text)<end:
     lines.append(text)
     break
@@ -100,13 +109,29 @@ Text is wrapped, and ends for each line at columnStart+len(lineNodeText).
    if move==self.SKIP_CHILDREN:
     skip=self.getChildCount(idx)
     self.skip=self.SKIP_THIS
-   if self.x==0 or "".join([i[1] for i in self.ret.get(self.y,[])]).endswith(" "):
-    text=text.lstrip()
+   if self.inPre>0:
+    if self.x==0:
+     text=text.lstrip()
+   else:
+    if self.x==0 or "".join([i[1] for i in self.ret.get(self.y,[])]).endswith(" "):
+     text=text.lstrip()
 #   else:
-   text=self.spaces.sub(" ",text)
-   new=self.wrapText(text,self.maxx,self.x)
+    text=self.spaces.sub(" ",text)
+   new=self.wrapText(text,self.maxx,self.x,self.inPre)
    if type(new)!=list:
     new=[new]
+   if self.inPre>0:
+    c=0
+    t=[]
+    for p in new:
+     if not p.strip():
+      c+=1
+      if c<=2: continue
+     if c>2:
+      c=0
+      continue
+     t.append(p)
+    new=t
    while new:
     l=new.pop(0)
     if not self.ret.get(self.y,None):
@@ -207,6 +232,14 @@ For instance, this would be used for a br element, where a line break is mandato
 #  self.ret[self.y].append((self.x,'',self.lst[idx]))
 
  def div(self,idx):
+  return ''
+
+ def pre(self,idx):
+  self.inPre+=1
+  return ''
+
+ def endPre(self,idx):
+  self.inPre-=1
   return ''
 
  def h1(self,idx):
