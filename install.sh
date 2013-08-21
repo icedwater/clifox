@@ -64,9 +64,9 @@ profid=$(ls -1 ~/.mozilla/firefox | grep -i default | head -n1)
 profdir=~/.mozilla/firefox/$profid
 echo "profile directory:$profdir"
 mkdir -p "$profdir/extensions"
-echo "overriding prefs.js file"
-rm "$profdir/prefs.js"
-ln -s "`pwd`/firefox/prefs.js" "$profdir/prefs.js"
+echo "overriding user.js file"
+rm "$profdir/user.js"
+ln -s "`pwd`/firefox/user.js" "$profdir/user.js"
 echo "linking mozrepl extension from this source path"
 ln -s "`pwd`/mozrepl" "$profdir/extensions/mozrepl"
 echo "modifying extentions.ini"
