@@ -785,9 +785,9 @@ w.mo.window=w;
 },
 init:function()
 {
-for(var i=0;i<gBrowser.visibleTabs.length;i++)
+for(var i=0;i<gBrowser.tabs.length;i++)
 {
-var w=gBrowser.visibleTabs[i].linkedBrowser.contentWindow;
+var w=gBrowser.tabs[i].linkedBrowser.contentWindow;
 if(w.mo)
 {
 w.mo.disconnect();
@@ -798,9 +798,9 @@ this.add(w);
 },
 kill:function()
 {
-for(var i=0;i<gBrowser.visibleTabs.length;i++)
+for(var i=0;i<gBrowser.tabs.length;i++)
 {
-var w=gBrowser.visibleTabs[i].linkedBrowser.contentWindow;
+var w=gBrowser.tabs[i].linkedBrowser.contentWindow;
 if(w.mo)
 {
 w.mo.disconnect();
@@ -815,6 +815,7 @@ var grabVars={
 "A":["textContent","href","title","name"],
 "INPUT":["title","type","value","checked","name","disabled","alt","src"],
 "BUTTON":["title","type","value","checked","name","textContent","disabled"],
+"TEXTAREA":["name","innerHTML","disabled"],
 "SELECT":["textContent","value","type","selectedIndex","disabled","name"],
 "IMG":["alt","src","title"],
 "LABEL":["control"]

@@ -882,7 +882,7 @@ length: the maximum length for this text entry (element.attr=maxlength is the co
  def newWindow(self,url="about:blank"):
   p=self.js.gBrowser.addTab(url)
   p.url=url
-  self.moveWindow(id=self.js.Array.indexOf(self.js.gBrowser.visibleTabs,p))
+  self.moveWindow(id=self.js.Array.indexOf(self.js.gBrowser.tabs,p))
 
  def nextWindow(self):
   self.moveWindow(1)
@@ -896,7 +896,7 @@ length: the maximum length for this text entry (element.attr=maxlength is the co
   self.saveWindow()
   _id=id
   id=self.windex
-  tl=self.js.gBrowser.visibleTabs.length-1
+  tl=self.js.gBrowser.tabs.length-1
   if direction and _id==None:
    if direction>0:
     id=id+1 if id<tl else 0
@@ -905,7 +905,7 @@ length: the maximum length for this text entry (element.attr=maxlength is the co
   if _id!=None:
    id=_id
   self.windex=id
-  p=self.js.gBrowser.visibleTabs[id]
+  p=self.js.gBrowser.tabs[id]
   self.js.gBrowser.selectedTab=p
   log("selectedTab set")
 
@@ -955,7 +955,7 @@ length: the maximum length for this text entry (element.attr=maxlength is the co
     self.newWindow(getattr(self,"start_url",config.get("homepage","http://bmcginty.hopto.org/form.html")))
    else:
     self.moveWindow(id=0)
-    self.restoreWindow(self.js.gBrowser.visibleTabs[0])
+    self.restoreWindow(self.js.gBrowser.tabs[0])
   while 1:
    time.sleep(0.01)
    self.js.ref.recv(0.01)
