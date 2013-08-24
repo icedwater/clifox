@@ -24,18 +24,22 @@ supply a list of document elements to be rendered (e.g. from iterNodes)
 """
   width=self.maxx if width==None else width
   start,end=0,0
+#if we're starting to the right of 0, then we have that amount fewer spaces to place text, so remove that amount from @end
   if indent!=None:
    end=width-indent
   else:
    end=width
 #  log("beforeWhile:","end:",end,"textLength:",textLength)
+#if the text will all fit on the current line, then return this text
   if len(text)<end:
    return [text]
   lines=[]
   while text:
+#pre means that the text is preformatted
    if pre>0:
+#search for a new line, so we can split the text appropriately
     where=text.find("\n")
-    log("text:",len(text),repr(text),where)
+#    log("text:",len(text),repr(text),where)
     if where>-1 and where<end:
      t,text=text[:where],text[where+1:]
      lines.append(t)
@@ -44,9 +48,10 @@ supply a list of document elements to be rendered (e.g. from iterNodes)
    if len(text)<end:
     lines.append(text)
     break
+#search for spaces from the end of the largest string that can be placed on the remainder of the current line
    where=text[:end].rfind(" ")
    if where>-1:
-    t,text=text[:where],text[where:]
+    t,text=text[:where],text[where+1:]
     lines.append(t)
    else:
     t,text=text[:end],text[end:]
@@ -220,6 +225,7 @@ For instance, this would be used for a br element, where a line break is mandato
 #  self.ret[self.y].append((self.x,'',self.lst[idx]))
 
  def div(self,idx):
+  self.nl(idx)
   return ''
 
  def pre(self,idx):
@@ -255,6 +261,16 @@ For instance, this would be used for a br element, where a line break is mandato
 
  def unknown(self,idx):
   return ''
+
+ def textarea(self,idx):
+  self.fnl(idx)
+  self.skip=self.SKIP_CHILDREN
+  n=self.lst[idx]
+  nm=self.getInputName(idx)
+  v=n.innerHTML
+  c=v if v else ''
+  if nm: c="["+nm+"] "+c
+  return c
 
  def text(self,idx):
   return self.lst[idx].nodeValue
