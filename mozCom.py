@@ -763,6 +763,9 @@ repl.notifyMutations=function(records,observer)
 {
 if(gBrowser.selectedTab.linkedBrowser.contentWindow==observer.window)
 {
+if(observer.window.document.readyState=="complete")
+{
+//repl.print({"m":"w","a":["notifyMutations",records.length]});
 var r=[];
 var t=[];
 for(var i=0;i<records.length;i++)
@@ -774,6 +777,7 @@ t.push(records[i].target);
 }
 }
 repl.print(JSON.stringify({"m":"ec","a":[r],"t":"mutation","i":""}));
+}
 }
 }
 repl.mutationObsObj={
