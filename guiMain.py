@@ -310,6 +310,7 @@ class gui(forms):
     lc.append(t)
    else:
     id,num,nn,v,t,pn=o[:6]
+    if not nn: nn="null"
     nn=nn.upper() if nn[0]!="#" else nn
     v={"num":num,"nodeName":nn,"tagName":nn,"nodeValue":v,"nodeTypeInvalid":t,"parentNode":jm.get(pn,None),"_flags_skip":0}
     v.update([(o[j],o[j+1]) for j in xrange(6,len(o),2) if o[j] not in v])
