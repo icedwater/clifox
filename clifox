@@ -310,7 +310,7 @@ used, e.g. when reading a webpage as a whole document.
 
  def navigateInNewWindow(self,url=None):
   if url==None:
-   url=self.prompt("url (new window):",self.entry, history=self.goHistory)
+   url=self.prompt("url (new window):",self.entry, history=None)
   self.newWindow(url)
 
  def goBack(self):

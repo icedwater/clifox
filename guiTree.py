@@ -180,6 +180,10 @@ class fileTreeview(treeview):
   return
 
 class nodeTreeview(treeview):
+ def getReturnable(self,i):
+  j=i[1]
+  return j.nodeName if j.nodeName else str(j)
+
  def canExpand(self,x):
   return 1 if dir(x[1]) else 0
 

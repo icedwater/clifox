@@ -224,6 +224,17 @@ For instance, this would be used for a br element, where a line break is mandato
 #   self.ret[self.y]=[]
 #  self.ret[self.y].append((self.x,'',self.lst[idx]))
 
+ def iframe(self,idx):
+  n=self.lst[idx]
+  self.fnl(idx)
+  return "{} frame %s" % (n.src,) if "youtube" in n.src.lower() else ''
+ frame=iframe
+
+ def endIframe(self,idx):
+  self.fnl(idx)
+  return ''
+ endFrame=endIframe
+
  def div(self,idx):
   self.nl(idx)
   return ''
