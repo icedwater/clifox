@@ -30,14 +30,25 @@ if [ ! -f "$ffpath/firefox" ]
 then
 mkdir ff
 cd ff
+tf=$(ls -1 *.tar | grep -i tar)
+if [ $? != 0 ]
+then
 path="ftp://ftp.mozilla.org/pub/firefox/releases/latest/linux-$arch/en-US/"
 wget --no-remove-listing "$path"
 fn=`cat ./.listing | tr '\r' '\n' | rev | cut -d ' ' -f 1 | rev | grep -i bz2`
+rm "./.listing"
 fullfn="$path$fn"
 rm ./*
 wget "$fullfn"
 bunzip2 *.bz2
+fi
 tar -xf *.tar
+if [ $? != 0 ]
+then
+rm *.tar
+echo "error untarring firefox. deleting current firefox installation archives. You can attempt to rerun install.sh to redownload and retry."
+exit 1
+fi
 cd ..
 fi
 fi
@@ -65,13 +76,25 @@ profdir=~/.mozilla/firefox/$profid
 echo "profile directory:$profdir"
 mkdir -p "$profdir/extensions"
 echo "overriding user.js file"
+if [ -f "$profdir/user.js" ]
+then
 rm "$profdir/user.js"
+fi
 ln -s "`pwd`/firefox/user.js" "$profdir/user.js"
 echo "linking mozrepl extension from this source path"
 ln -s "`pwd`/mozrepl" "$profdir/extensions/mozrepl"
+if [ -f "$profdir/prefs.js" ]
+then
+echo "removing prefs.js"
+rm "$profdir/prefs.js"
+fi
 echo "modifying extentions.ini"
+if [ ! -f "$profdir/extensions.ini" ]
+then
+echo "" > $profdir/extensions.ini
+else
 python -c "fh=open('$profdir/extensions.ini','rb');fc=fh.read();fh.close();p=fc.find('\n')+1;fc=fc[:p]+'Extension0=$profdir/extensions/mozrepl\n'+fc[p:];fh=open('$profdir/extensions.ini','wb');fh.write(fc);fh.flush();fh.close()"
-cp $profdir/extensions.ini $profdir/extensions2.ini
+fi
 ret=$(timeout 5 xvfb-run $ffpath/firefox)
 retcode=$?
 if [ $retcode != 124 ]
@@ -82,8 +105,8 @@ Displayed text was:
 $ret"
 exit 1
 fi
-mv $profdir/extensions2.ini $profdir/extensions.ini 
-touch $profdir/extensions.ini
+#mv $profdir/extensions2.ini $profdir/extensions.ini 
+#touch $profdir/extensions.ini
 echo "copying clifox config."
 if [ ! -d ~/.clifox ]
 then
