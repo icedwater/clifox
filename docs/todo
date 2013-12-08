@@ -1,0 +1,6 @@
+unurlencode img.src's
+use gbrowser.visibletabs[idx].linkedBrowser.*uri* for loading urls (avoid dead page issues)
+add -tab option and -tablist option so you can direct a tab to a webpage without loading the repl.map with objects that will be stale almost at once
+fix wrapping (check about:memory for a good example)
+truncate images to a reasonable length if they are img.src (maybe limit the .src to the length of the current line, or use link.textContent, or it's length, as the preexisting lengthf or the line
+
