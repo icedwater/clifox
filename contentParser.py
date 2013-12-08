@@ -23,6 +23,7 @@ supply a list of document elements to be rendered (e.g. from iterNodes)
   """wraps text, respecting spacing and line breaks whenever possible
 """
   width=self.maxx if width==None else width
+  log(":wrap","pre:",pre,"width:",width,"indent:",indent,"width:",width,"text:",text)
   start,end=0,0
 #if we're starting to the right of 0, then we have that amount fewer spaces to place text, so remove that amount from @end
   if indent!=None:
@@ -53,6 +54,12 @@ supply a list of document elements to be rendered (e.g. from iterNodes)
    if where>-1:
     t,text=text[:where],text[where+1:]
     lines.append(t)
+#fix
+#if we're farther than half way across the page, and this chunk of text is less than a quarter of the width of the page, then go ahead and move it to the next line.
+#   elif indent>(width/2) and text.rfind(" ")<(width/4):
+#    where=text[:width].rfind(" ")
+#    t,text=text[:where],text[where+1:]
+#    lines.append(t)
    else:
     t,text=text[:end],text[end:]
     lines.append(t)
@@ -129,7 +136,7 @@ Text is wrapped, and ends for each line at columnStart+len(lineNodeText).
     l=new.pop(0)
     if not self.ret.get(self.y,None):
      self.ret[self.y]=[]
-    l=l.strip() if self.x==0 else l
+    l=l.lstrip() if self.x==0 else l
     self.ret[self.y].append((self.x,l,self.lst[idx]))
     self.x+=len(l)
     if new:
