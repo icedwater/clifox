@@ -537,6 +537,7 @@ length: the maximum length for this text entry (element.attr=maxlength is the co
   return self.setStatus("downloading is not currently available")
 
  def execute(self):
+  self.setStatus("clicked")
   d=self.getFocusedElement()
 #  log("execute:focus:",str(d),repr(d))
 #  d.click()
