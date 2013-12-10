@@ -512,7 +512,7 @@ length: the maximum length for this text entry (element.attr=maxlength is the co
   d=self.getFocusedElement()
   if d==None:
    return None
-#  log("onFocus:d="+str(d)+",parentNodeNames="+str(self.parentNodeNames(d)))
+  log("onFocus: d="+d.nodeName+" type="+str(d.type)+", pnns="+str(self.parentNodeNames(d)))
   if d.nodeName=="A":
    p=d
   elif d.nodeName in ("IFRAME","FRAME"):
@@ -520,6 +520,8 @@ length: the maximum length for this text entry (element.attr=maxlength is the co
   elif "A" in self.parentNodeNames(d):
    p=d.parentNode
    while p.nodeName!="A": p=p.parentNode
+  elif d.nodeName=="IMG":
+   return self.setStatus("image")
   else:
    return self.setStatus("")
   if p.href!=None:
@@ -539,15 +541,14 @@ length: the maximum length for this text entry (element.attr=maxlength is the co
  def execute(self):
   self.setStatus("clicked")
   d=self.getFocusedElement()
-#  log("execute:focus:",str(d),repr(d))
-#  d.click()
+#  log("execute:focus:d=",d.nodeName)
   if "A" in self.parentNodeNames(d):
-   log("execute:linkFound:",d)
    while d.nodeName!="A":
+    log("execute:currentNode:",d.nodeName)
     d=d.parentNode
+  log("execute:currentNode:",d.nodeName)
+#  open("/tmp/logfile.txt","wb").write("".join([str(j)+":"+str(self.f[j])+chr(10) for j in dir(self.f)]))
   if (d.nodeName=="INPUT" and str(d.type).lower() in ("button","reset","submit","image")) or (d.nodeName=="BUTTON"):
-#   d.click()
-#   if d.form.evt_submit():
    return self.doClick(d)
   if self.formElements.intersection(self.parentNodeNames(d)):
    while d!=None and d.nodeName in self.formElements:
