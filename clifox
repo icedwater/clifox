@@ -1,7 +1,6 @@
 #!/usr/bin/python
 #main browser file (url fetcher, GUI wrapper, main window thread)
 import sys
-sys.path.insert(0,".")
 reload(sys)
 sys.setdefaultencoding('utf-8')
 import os,os.path
