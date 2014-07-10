@@ -1,6 +1,7 @@
 #!/usr/bin/python
 #main browser file (url fetcher, GUI wrapper, main window thread)
 import sys
+sys.path.insert(0,".")
 reload(sys)
 sys.setdefaultencoding('utf-8')
 import os,os.path
@@ -152,18 +153,19 @@ jsRoot points to the root class of js
 #  if self.dom.document.ref.id!=old:
 #   return
   self.events.append(e)
-#  self.setStatus("event onStateChange")
+  self.setStatus("event onStateChange: %s" % (self.dom.location.href))
 #  self.page.linkedBrowser.ref.jsrefresh()
 #  self.dom=self.page.linkedBrowser.contentDocument.defaultView
 #  self.pageRefreshData()
   self.restoreWindow(self.page)
-  if "youtube.com" in self.dom.location.host and "youtube.com/embed/" in self.dom.location.href:
+  if "youtube.com" in self.dom.location.host and ("youtube.com/embed/" in self.dom.location.href or "youtube.com/watch" in self.dom.location.href):
    try:
 #    self.dom.wrappedJSObject.yt.player.getPlayerByElement("player").playVideo()
     b=self.dom.wrappedJSObject.document.body
-    x=b.appendChild(self.dom.wrappedJSObject.document.createElement("div"))
-    x.innerHTML='<a onclick="javascript:yt.player.getPlayerByElement(\'player\').playVideo();">play video</a>'
-    x.innerHTML+='<a onclick="javascript:yt.player.getPlayerByElement(\'player\').stopVideo();">stop video</a>'
+    name="player-api"
+    x=b.insertBefore(self.dom.wrappedJSObject.document.createElement("div"),b.firstChild)
+    x.innerHTML='<a onclick="javascript:yt.player.getPlayerByElement(\'%s\').playVideo();">play video</a>' % (name,)
+    x.innerHTML+='<a onclick="javascript:yt.player.getPlayerByElement(\'%s\').stopVideo();">stop video</a>' % (name,)
     self.doPaint(1)
    except:
     pass
@@ -512,7 +514,7 @@ length: the maximum length for this text entry (element.attr=maxlength is the co
   d=self.getFocusedElement()
   if d==None:
    return None
-  log("onFocus: d="+d.nodeName+" type="+str(d.type)+" name="+str(d.name)+" value="+str(d.value)+" url="+str(d.url)+" src="+str(d.src)+" alt="+str(d.alt)+", pnns="+str(self.parentNodeNames(d)))
+  log("onFocus: d="+d.nodeName+" type="+str(d.type)+" name="+str(d.name)+" value="+str(d.value)+" checked="+str(d.checked)+"\n innerHTML="+str(d.innerHTML)+" url="+str(d.url)+" src="+str(d.src)+" alt="+str(d.alt)+", pnns="+str(self.parentNodeNames(d)))
   if d.nodeName=="A":
    p=d
   elif d.nodeName in ("IFRAME","FRAME"):
@@ -521,18 +523,20 @@ length: the maximum length for this text entry (element.attr=maxlength is the co
    p=d.parentNode
    while p.nodeName!="A": p=p.parentNode
   elif d.nodeName=="IMG":
-   return self.setStatus("image")
+   return self.setStatus("image %s" % d.src)
   elif d.nodeName=="TEXTAREA":
-   return self.setStatus("text input field")
+   return self.setStatus("textArea input, name %s" % d.name)
   elif d.type=="SELECT":
    return self.setStatus("select list field")
   elif d.nodeName=="INPUT":
-   if d.type=="CHECKBOX":
-    return self.setStatus("check box")
-   elif d.type=="RADIO":
-    return self.setStatus("radio button check box")
+   if d.type=="checkbox":
+    ret="checkbox,checked" if d.checked==True else "checkbox, not checked"
+    return self.setStatus(ret)
+   elif d.type=="radio":
+    ret="radio button, checked" if d.checked==True else "radio button, not checked"
+    return self.setStatus("%s %s" % (ret,str(d.name)))
    elif [d.type in ("TEXT","PASSWORD")]:
-    return self.setStatus("%s input field" % str(d.type))
+    return self.setStatus("%s input, name %s" % (str(d.type),str(d.name)))
   else:
    return self.setStatus("")
   if p.href!=None:
@@ -636,7 +640,7 @@ length: the maximum length for this text entry (element.attr=maxlength is the co
     [setattr(o,"checked",0) for o,p in opts if o!=ret[0]]
   elif e.nodeName=="INPUT" and e.type=="checkbox":
 #   self.setStatus("HFI:checkbox")
-   ret=self.gCheckbox(title=e.name,values=[e.name],checked=e.checked)
+   ret=False if e.checked==True else True
    e.checked=ret
   else:
    ret=self.prompt(default=e.value)
@@ -937,7 +941,7 @@ length: the maximum length for this text entry (element.attr=maxlength is the co
 
  def handleEvent(self,ev):
 #  self.events.append(ev)
-  log("mainWindow:event:",str(ev))
+#  log("mainWindow:event:",str(ev))
   try:
    n=ev['t']
    n=n[0].lower()+n[1:]
