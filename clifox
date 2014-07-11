@@ -152,7 +152,7 @@ jsRoot points to the root class of js
 #  if self.dom.document.ref.id!=old:
 #   return
   self.events.append(e)
-  self.setStatus("event onStateChange: %s" % (self.dom.location.href))
+#  self.setStatus("event onStateChange: %s" % str(self.dom.location.href))
 #  self.page.linkedBrowser.ref.jsrefresh()
 #  self.dom=self.page.linkedBrowser.contentDocument.defaultView
 #  self.pageRefreshData()
@@ -161,7 +161,7 @@ jsRoot points to the root class of js
    try:
 #    self.dom.wrappedJSObject.yt.player.getPlayerByElement("player").playVideo()
     b=self.dom.wrappedJSObject.document.body
-    name="player-api"
+    name="player"
     x=b.insertBefore(self.dom.wrappedJSObject.document.createElement("div"),b.firstChild)
     x.innerHTML='<a onclick="javascript:yt.player.getPlayerByElement(\'%s\').playVideo();">play video</a>' % (name,)
     x.innerHTML+='<a onclick="javascript:yt.player.getPlayerByElement(\'%s\').stopVideo();">stop video</a>' % (name,)
