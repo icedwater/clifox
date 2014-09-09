@@ -151,6 +151,14 @@ class gui(forms):
     return i
   return None
 
+ @property
+ def nodes_flat(self):
+  l=[]
+  v=self._display.values()
+  for line in v:
+   l+=[j[-1] for j in line]
+  return l
+
  def getElementsByTagName(self,root,tag=""):
   tag=tag.upper()
   idx=self.nodes_flat.index(root)
