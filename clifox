@@ -640,7 +640,8 @@ length: the maximum length for this text entry (element.attr=maxlength is the co
   elif e.nodeName=="INPUT" and e.type=="checkbox":
 #   self.setStatus("HFI:checkbox")
    ret=False if e.checked==True else True
-   e.checked=ret
+#   e.checked=ret
+   self.doClick(e)
   else:
    ret=self.prompt(default=e.value)
    e.value=ret
