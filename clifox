@@ -992,7 +992,8 @@ def main2():
  global quitFlag
  quitFlag=0
  warnings.simplefilter("ignore")
- j,q=mozCom.initCliFox()
+ j,q=mozCom.initCliFox(hostname="192.168.1.187")
+# j,q=mozCom.initCliFox(hostname="localhost")
  curses.wrapper(ActiveWindow,jsQ=q,jsRoot=j,start_url=[i for i in sys.argv if ":" in i][0] if [i for i in sys.argv if ":" in i] else None)
 
 if __name__=='__main__':
