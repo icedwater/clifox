@@ -1,0 +1,9 @@
+{
+  "name": "clifox2",
+  "title": "clifox2",
+  "id": "jid1-zpMpcStktkA1uw",
+  "description": "NCurses interface bridging Firefox to command-line linux",
+  "author": "",
+  "license": "MPL 2.0",
+  "version": "0.1"
+}

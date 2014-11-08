@@ -1,0 +1,2 @@
+component {31922880-38c6-4a54-b8b1-e7d011051d81} components/main.js
+contract @mozilla.org/network/protocol;1?name=identity {31922880-38c6-4a54-b8b1-e7d011051d81}
