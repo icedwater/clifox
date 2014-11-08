@@ -848,7 +848,7 @@ used, e.g. when reading a webpage as a whole document.
 
 def parseArgs():
  parser=argparse.ArgumentParser()
- parser.add_argument("-H","--hostname",action="store",dest="hostname",help="address or name of host where firefox and the clifox extension are running")
+ parser.add_argument("-H","--hostname",action="store",dest="hostname",help="address or name of host where firefox and the clifox extension are running",default="localhost")
  parser.add_argument("--debug",action="store_true",dest="debug",help="run python debugger when a page loads")
  parser.add_argument("homepage",action="store",nargs="?",help="homepage url")
 # parser.add_argument("--profile",action="store_true",dest="profile",help="enable profiler")
