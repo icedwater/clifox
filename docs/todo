@@ -1,6 +1,44 @@
+when we do a refresh, grab the old display of all the nodes as a "\n" delimited list of all the lines, and compare the new refresh to that, moving you to the first line where the non-whitespace differs
+
+see if we can get a partially loaded page, e.g.
+<script>
+var i,t;
+i=0;
+while(i<100) {
+t=document.head.appendChild(document.createElement("script"));
+t.type="text/javascript";
+t.src="http://apps.bmcginty.us/cgi-bin/sleep.cgi?wait=1000&i="+i.toString();
+i+=1;
+}
+</script>
+
+fix logging config values to be consistent (maybe make debug a value of 99, so when debug is used, it sets logging to 99)
+
+add autoForms mode option so typing edits form field
+
+make prompts just lines on the screen, where statusbar is editted
+
+check to make sure objects won't get confused on the python side, e.g.:
+self.page,self.js.clifox.getActiveTab()
+
 unurlencode img.src's
+
 use gbrowser.visibletabs[idx].linkedBrowser.*uri* for loading urls (avoid dead page issues)
+
 add -tab option and -tablist option so you can direct a tab to a webpage without loading the repl.map with objects that will be stale almost at once
+
 fix wrapping (check about:memory for a good example)
+
 truncate images to a reasonable length if they are img.src (maybe limit the .src to the length of the current line, or use link.textContent, or it's length, as the preexisting lengthf or the line
+
+done. prompter overriding example:
+https://selenium.googlecode.com/git-history/fe33beb172e65c6b1518223ccddc5494ad0856e4/javascript/firefox-driver/js/promptService.js
+
+done. continuing to run for rest of thread while waiting for user to respond to dialog:
+https://developer.mozilla.org/en-US/Add-ons/Code_snippets/Threads
+var thread = Components.classes["@mozilla.org/thread-manager;1"]
+                        .getService(Components.interfaces.nsIThreadManager)
+                        .currentThread;
+ while (!complete)
+   thread.processNextEvent(true);
 

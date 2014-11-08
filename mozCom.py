@@ -1,7 +1,10 @@
 import os,sys,select,socket,time,Queue,urllib,configParser
 try:
  try:
-  import json
+  try:
+   import ujson as json
+  except:
+   import json
  except:
   import simplejson as json
 except:
@@ -51,7 +54,7 @@ class JSClass(object):
   return self.__getattr__(x)
 
  def __setitem__(self,x,y):
-  return self.__setattr(x,y,1)
+  return self.__setattr__(x,y,1)
 
  def __repr__(self):
   r=self.ref
@@ -59,10 +62,7 @@ class JSClass(object):
 
  def __dir__(self):
   r=self.ref
-#list all methods and properties for an object
-#arguments are [objectId]
-#oi holds [0] as a pointer to a[0], which is the id
-  d={"m":"d","a":[r.id],"i":r.id,"oi":[0]}
+  d={"m":"d","a":[r.id],"i":r.id}
   rr=r.root.ref
   rr.send(d)
   ret=rr.recv()
@@ -74,6 +74,7 @@ class JSClass(object):
   r=self.ref
   if x in r.vars:
    return r.vars[x]
+#  print x
   if r.root!=self and r.id not in r.map:
    return r.parent[r.name][x]
   if (r.id,x) in r.rMap:
@@ -95,19 +96,6 @@ class JSClass(object):
    r.rMap[(r.id,ar.name)]=a
    return a
 
- def prepareArgs(self,l):
-  if type(l)==JSClass:
-   return l.ref.id,[0]
-  retO,retI=[],[]
-  for i in xrange(len(l)):
-   li=l[i]
-   if type(li)==JSClass:
-    retO.append(li.ref.id)
-    retI.append(i)
-   else:
-    retO.append(li)
-  return retO,retI
-
  def __setattr__(self,x,y,override=0):
   if x=="ref":
    return object.__setattr__(self,"ref",y)
@@ -116,8 +104,10 @@ class JSClass(object):
    r.vars[x]=y
    return y
   name=x if type(x)!=JSClass else x.ref.name
-  y,yi=self.prepareArgs(y)
-  d={"m":"s","a":[name,y],"oi":yi,"i":r.id}
+  y=[y] if type(y)!=list else y
+  ois=[y.index(i) for i in y if type(i)==JSClass]
+  a=[(i.ref.id if type(i)==JSClass else i) for i in y]
+  d={"m":"s","a":[name,a],"i":r.id,"oi":ois}
   r.root.ref.send(d)
   ret=r.root.ref.recv()
 #~~
@@ -138,8 +128,9 @@ class JSClass(object):
   r=self.ref
   if r.root!=self and r.id not in r.root.ref.map:
    return r.parent[r.name](*a,**kw)
-  a,ids=self.prepareArgs(a)
-  d={"m":"c","a":[r.name,a],"i":r.parent.ref.id,"ids":ids}
+  ois=[a.index(i) for i in a if type(i)==JSClass]
+  a=[(i.ref.id if type(i)==JSClass else i) for i in a]
+  d={"m":"c","a":[r.name,a],"i":r.parent.ref.id,"oi":ois}
   r.root.ref.send(d)
   ret=r.root.ref.recv()
 #~~
@@ -193,24 +184,26 @@ class JSReference(object):
   while 1:
    if "\n" in self.data:
     ret,self.data=self.data.split("\n",1)
-    print ret
+#    print ret
     self.dlog.append(ret)
     if dbg>=1: dbgl.append("in:"+str(ret))
     if dbg>1: log(dbgl[-1])
 #error in deserialization?
     etime1=time.time()
-    encodings="latin-1,utf-8".split(",")
-    for enc in encodings:
-     try:
-      ret=json.loads(ret)
-#      ret=eval(ret)
-#ret.decode(enc).encode('raw_unicode_escape').decode(enc))
-#unicode(ret,enc))
-      break
-     except UnicodeDecodeError:
-      continue
-     except UnicodeEncodeError:
-      continue
+    ret=json.loads(ret)
+    if 0:
+     encodings="latin-1,utf-8".split(",")
+     for enc in encodings:
+      try:
+       ret=json.loads(ret.decode('latin-1'))
+ #      ret=eval(ret)
+ #ret.decode(enc).encode('raw_unicode_escape').decode(enc))
+ #unicode(ret,enc))
+       break
+      except UnicodeDecodeError:
+       continue
+      except UnicodeEncodeError:
+       continue
     if dbg>1: log("jsonTime:",time.time()-etime1)
 #back from a request we generated? just return this data to the caller, e.g. __getattr__, who will process it.
     if ret['m']=="b":
@@ -220,7 +213,6 @@ class JSReference(object):
      log("event:"+repr(ret))
      raise Exception("js/"+ret['a'][0])
 #an event popped up, stick it in the q.
-    print ret
     if ret['m'] in ("w","e","E","ec"):
      if ret['m'] in ("e","E"):
       x=JSClass(name=ret['t'],id=ret['a'][0],parent=None,root=self.root)
@@ -262,10 +254,10 @@ class JSReference(object):
  def eval(self,s):
   self.root.ref.send({"m":"x","i":self.id,"a":[s]})
   x=self.root.ref.recv()
-  for i in xrange(len(x['a'])):
+  for i in xrange(len(x.get("oi",[]))):
    b=x['a'][i]
-   if type(b)==list and len(b)==2 and str(b[0])=='j':
-    x['a'][i]=self.map[b[0]]
+#   if type(b)==list and len(b)==2 and str(b[0])=='j':
+   x['a'][i]=self.map[b]
   return x['a'][0]
 
  def checkIds(self):
@@ -285,12 +277,14 @@ class JSReference(object):
 
  def jsrefresh(self):
   c=self
+  [c.vars.pop(i) for i in c.vars]
   if c.id in self.map: del self.map[c.id]
   k=(c.parent.ref.id,c.name)
   if k in self.rMap:
    self.rMap.pop(k)
    l=[(id,name) for id,name in self.rMap if id==c.id]
    [self.rMap.pop(i) for i in l]
+   [self.map.pop(i[0]) for i in l if i[0] in self.map]
 
 class JSIterator(object):
  def __init__(self,cls):
@@ -324,13 +318,14 @@ def initCliFox(hostname="localhost",port=4242,q=None,js=None,ignoreErrors=0):
  eventQ=Queue.Queue() if not q else q
  j=JSClass(name="this",value=None,id="jthis",root=0,q=eventQ,hostname=hostname,port=port)
  try:
-  j.ref.eval(js)
+  w=j.ref.eval(js)
+#  print "ret:",w
  except Exception,e:
+#  print "e!",e
   if ignoreErrors==1:
    pass
   else:
    print e
-   print 'clifox:error'
 #   print 'clifox:error, dialog "%s"' % (j.ref.eval("document.title"),)
    sys.exit(1)
  return j,eventQ

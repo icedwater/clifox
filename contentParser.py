@@ -278,6 +278,7 @@ For instance, this would be used for a br element, where a line break is mandato
   return '* '
 
  def unknown(self,idx):
+#  return '[unknown-'+str(self.lst[idx].nodeName)+']'
   return ''
 
  def textarea(self,idx):
@@ -331,6 +332,8 @@ For instance, this would be used for a br element, where a line break is mandato
   self.fnl(idx)
   nt=self.lst[idx].type
   nt=nt[0].upper()+nt[1:].lower()
+  if nt=="Hidden":
+   return ''
   value=getattr(self,"input"+nt,self.inputUnknown)(idx)
   if self.lst[idx].disabled:
    nm="disabled "+nm

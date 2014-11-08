@@ -3,7 +3,7 @@
 import sys
 reload(sys)
 sys.setdefaultencoding('utf-8')
-import os,os.path
+import os,os.path,argparse
 path=os.path.realpath(__file__).rsplit(os.sep,1)[0]+"/modules"
 sys.path.append(path)
 import configParser
@@ -19,12 +19,6 @@ import guiMain
 import mozCom
 from guiObjects import *
 from utils import log,generate_error_report
-profiler=0
-
-if "-debug" in sys.argv:
- utils.log("debugging started, port will open on 7777 when page loads")
-# import profile
- profiler=1
 
 def makeCleanFunctionName(s):
  if "." not in s:
@@ -85,6 +79,8 @@ jsRoot points to the root class of js
   self.start_url=start_url
   self.codeHist=[]
   self.events=[]
+  global config
+  self.config=config
   self.local_vars="numLines,_display,nodes,parser,screenNum,screenPos,screenPosX,url".split(",")
   self.jsQ=jsQ
   self.js=jsRoot
@@ -131,15 +127,15 @@ jsRoot points to the root class of js
    del self.dom
 
  def noNext(self, s):
-   if config.beeps=='true':
+   if config.beeps:
      curses.beep()
-   if config.limitMessages=='true':
+   if config.limitMessages:
      self.setStatus("No more %s" % s)
 
  def noPrev(self, s):
-   if config.beeps=='true':
+   if config.beeps:
      curses.beep()
-   if config.limitMessages=='true':
+   if config.limitMessages:
      self.updateStatus("No previous %s" % s)
 
  def onStateChangeAll(self,e):
@@ -175,14 +171,17 @@ jsRoot points to the root class of js
   self.setStatus(str(len(e)))
 
  def tabSelect(self,e):
-  """firefox fires eventon tab switch"""
+  """firefox fires this event on tab switch"""
+  self.events.insert(0,e)
   log("tabSelect")
-  if self.page:
-   self.page.linkedBrowser.ref.jsrefresh()
+#   self.page.linkedBrowser.ref.jsrefresh()
   if self.page==e.target:
    return
+  if self.page:
+   del self.page
   self.page=e.target
   self.restoreWindow(self.page)
+  self.windex=self.js.clifox.listAllTabs().indexOf(e.target)
 
  def load(self,e):
   """trigger on page loads. currently replaced with the onStateChange event to account for the goBack method's lack of triggering of the load event."""
@@ -216,7 +215,7 @@ jsRoot points to the root class of js
 webpage has been received, processed, turned into a dom construct, and had it's load script method run.
 now we display the webpage by scanning the nodes for text, and displaying that text layout to screen.
 """
-  if profiler==1:
+  if argConfig.debug:
    try:
     self.setStatus("debugger enabled")
     utils.debugger(locals=locals())
@@ -305,13 +304,13 @@ used, e.g. when reading a webpage as a whole document.
   self.dom.location.href=fn
 
  def navigate(self,c=""):
-  go=self.prompt("url: ",self.entry, history=None)
+  go=self.prompt(prompt="url",y=self.entry, history=None)
   if go=='': return
-  self.dom.location.href=go
+  self.page.linkedBrowser.loadURI(go)
 
  def navigateInNewWindow(self,url=None):
   if url==None:
-   url=self.prompt("url (new window):",self.entry, history=None)
+   url=self.prompt(prompt="url (new window)",y=self.entry, history=None)
   self.newWindow(url)
 
  def goBack(self):
@@ -345,175 +344,31 @@ used, e.g. when reading a webpage as a whole document.
  def findPrevText(self,mx=-1):
   return self.findElement("#text",direction="backward")
 
- def rl (self, history=None, default=None, echo='true', length=None):
-  """
-prompt for user input, with bindings to that of the default readline implimentation
-history: a list of strings which constitutes the previously entered set of strings egiven to the caller of this function during previous calls
-default: the default text, entered as if the user had typed it directly
-echo: acts as a mask for passwords (set to ' ' in order to not echo any visible character for passwords)
-length: the maximum length for this text entry (element.attr=maxlength is the corresponding html attribute)
-"""
-  y,startX=self.screen.getyx()
-  if history!=None:
-   current=theEnd=len(history)
-   theEnd-=1
-  insertMode='true'
-  ret=''  # return complete line buffer
-  ptr=0
-  x=startX
-  self.screen.nodelay(0)
-  curses.raw(1)
-  if default!=None:
-   ret=default
-   self.screen.addstr(y, startX, echo*len(ret) if echo!='true' else ret)
-  while 1:
+ def nums(self):
+  cls=Listbox(screen=self.screen,base=self,y=1,values=zip(range(20),range(101,120)))
+  while not cls.done:
    c=self.screen.getch()
-#   self.setStatus("KeyPress "+str(c))
-   if curses.ascii.isprint(c):
-    if ptr==len(ret):
-     ret+=chr(c)
-     if echo!='true': c=echo
-     self.screen.addch(y, x, c)
-     if x == self.maxx-1:
-      tmp=self.screen.instr(y, startX+1)
-      self.screen.clrtoeol()
-      self.screen.addstr(y, startX, tmp)
-    elif insertMode=='true':
-     ret=ret[0:ptr]+chr(c)+ret[ptr:]
-     if echo!='true': c=echo
-     self.screen.insch(y, x, c)
-    else:
-     ret=ret[0:ptr]+chr(c)+ret[ptr+1:]
-     if echo!='true': c=echo
-     self.screen.addch(y, x, c)
-    if x < self.maxx-1: x += 1
-    if length!=None and ptr==length: break
-    ptr+=1
-   elif c == 3:  # ^C
-    self.setStatus("Input aborted!")
-    ret=''
-    break
-   elif c == 10:  # ^J newline
-    ret.rstrip(' ')
-    break
-   elif c in (1, 262):  # ^A, Home key
-    x=startX
-    ptr=0
-    self.screen.addstr(y, startX, ret)
-   elif c in (5, 360):  # ^E, End key
-    ptr=len(ret)
-    if ptr+startX > self.maxx-1:
-     self.screen.addstr(y, startX, ret[-self.maxx+1+startX:])
-     self.screen.addch(y, self.maxx-1, ' ')
-     x=self.maxx-1
-    else:
-     x=startX+ptr
-   elif c in (2, 260):  # ^B, left arrow
-    if x-1 >= startX: 
-     x -= 1
-     ptr -= 1
-    elif ptr>0:
-     ptr -= 1
-     self.screen.addstr(y, startX, ret[ptr:])
-    elif config.beeps=='true':
-     curses.beep()
-   elif c in (6, 261):  # ^f, right arrow
-    if x+1 <= startX+len(ret) and x+1 <= self.maxx-1:
-     x+=1
-     ptr += 1
-    elif ptr < len(ret):
-     ptr += 1
-     self.screen.clrtoeol()
-     self.screen.addstr(y, startX, ret[ptr+1-self.maxx+startX:ptr+1])
-    elif config.beeps=='true':
-     curses.beep()
-   elif c == 259:  # Up arrow
-    if not history: #history will return non-zero if it has content
-     self.setStatus("No history to move up through.")
-     if config.beeps=='true':
-      curses.beep()
-    elif current>0:
-     current-=1
-     ret=history[current]
-     self.screen.clrtoeol()
-     self.screen.addstr(y, startX, ret)
-    elif config.beeps=='true':
-     curses.beep()
-   elif c == 258:  # Down arrow
-    if not history:
-     self.setStatus("No history to move down through.")
-     if config.beeps=='true':
-      curses.beep()
-     continue
-    else:
-     current+=1
-     if current<=theEnd:
-      ret=history[current]
-     else:
-      ret=''
-      current-=1  # Don't want it running away.
-      if config.beeps=='true':
-       curses.beep()
-    self.screen.clrtoeol()
-    self.screen.addstr(y, startX, ret)
-#   elif c == 18:  # ^R Reverse search for Brandon
-   elif c in (8, 263):  # ^H, backSpace
-    if x > startX: 
-     self.screen.delch(y, x-1)
-     ret=ret[0:ptr-1]+ret[ptr:]
-     x -= 1
-     ptr-=1
-   elif c in (4, 330):  # ^D, delete
-    self.screen.delch(y, x)
-    ret=ret[0:ptr]+ret[ptr+1:]
-   elif c == 331:  # insert
-    if insertMode=='true':
-     insertMode='false'
-     self.setStatus("Insert Mode off")
-    else:
-     insertMode='true'
-     self.setStatus("Insert Mode On")
-   elif c == 21:  # ^U
-    x = startX
-    ptr=0
-    ret=''
-    self.screen.move(y, startX)
-    self.screen.clrtoeol()
-   elif c == 11:  # ^K
-    self.screen.clrtoeol()     
-    ret=ret[0:ptr]
-    self.screen.addstr(y, startX, ret)
-   self.screen.move(y, x)
-   self.screen.refresh()   
-#   self.setStatus("x="+str(x)+" ptr="+str(ptr))
-  self.screen.nodelay(1)
-  curses.raw(1)
-  curses.noecho()
-  if history!=None and ret:
-   history.append(ret)
-  return ret
+   handled=cls.handleKey(c)
 
- def prompt(self,prompt=":",y=None, history=None,default=None,echo='true'):
+ def prompt(self,prompt="",y=None, x=None, history=None,text="",echo=None):
+  if y==None:
+   y=self.entry
+#change to this once we have separation between form fields and their contents for rendering
+   y=self.screen.getyx()[0]
   pos=self.screen.getyx()
-  if y==None: y=self.status
-  self.screen.move(y,0)
-  self.screen.clrtoeol()
-  self.screen.addstr(y, 0, prompt)
-  self.screen.move(y, len(prompt)+1)
-  c=""
-  c=self.rl(history=history,default=default,echo=echo)
-  self.setStatus(prompt+c)
-  self.screen.move(y,0)
-  self.screen.clrtoeol()
+  cls=Readline(screen=self.screen,prompt=prompt,base=self,y=y,x=0,history=history,text=text,echo=echo)
+  while not cls.done:
+   c=self.screen.getch()
+   handled=cls.handleKey(c)
   self.screen.move(pos[0],pos[1])
-  self.screen.refresh()
-  return c
+  return "".join(cls.currentLine)
 
  def onFocus(self,*args):
   d=self.getFocusedElement()
   if d==None:
    return None
-  log("onFocus: d="+d.nodeName+" type="+str(d.type)+" name="+str(d.name)+" value="+str(d.value)+" checked="+str(d.checked)+"\n innerHTML="+str(d.innerHTML)+" url="+str(d.url)+" src="+str(d.src)+" alt="+str(d.alt)+", pnns="+str(self.parentNodeNames(d)))
+  if argConfig.debug:
+   log("onFocus: d="+d.nodeName+" type="+str(d.type)+" name="+str(d.name)+" value="+str(d.value)+" checked="+str(d.checked)+"\n innerHTML="+str(d.innerHTML)+" url="+str(d.url)+" src="+str(d.src)+" alt="+str(d.alt)+", pnns="+str(self.parentNodeNames(d)))
   if d.nodeName=="A":
    p=d
   elif d.nodeName in ("IFRAME","FRAME"):
@@ -618,13 +473,13 @@ length: the maximum length for this text entry (element.attr=maxlength is the co
    log("ret:",ret)
    log("form:",e.value)
   elif e.nodeName=="INPUT" and e.type=="text":
-   ret=self.prompt(default=e.value)
+   ret=self.prompt(text=e.value)
    e.value=ret
   elif e.nodeName=="INPUT" and e.type=="password":
-   ret=self.prompt(default=e.value,echo="*")
+   ret=self.prompt(text=e.value,echo="*")
    e.value=ret
   elif e.nodeName=="TEXTAREA":
-   ret=self.prompt(default=e.textContent)
+   ret=self.prompt(text=e.textContent)
    e.innerHTML=ret
   elif e.nodeName=="INPUT" and e.type=="radio":
 #   self.setStatus("HFI:radio button")
@@ -644,7 +499,7 @@ length: the maximum length for this text entry (element.attr=maxlength is the co
 #   e.checked=ret
    self.doClick(e)
   else:
-   ret=self.prompt(default=e.value)
+   ret=self.prompt(text=e.value)
    e.value=ret
   self.paintScreen()
   self.showScreen(screenNum=sn,y=y,x=x,force=1)
@@ -881,7 +736,7 @@ length: the maximum length for this text entry (element.attr=maxlength is the co
   self.showScreen(force=1)
 
  def execCode(self):
-  p=self.prompt("code:",history=self.codeHist)
+  p=self.prompt(prompt="code",history=self.codeHist)
   try:
    if ":"==p[0]:
     a=self.js.ref.eval(p[1:])
@@ -897,9 +752,10 @@ length: the maximum length for this text entry (element.attr=maxlength is the co
    generate_error_report()
 
  def newWindow(self,url="about:blank"):
-  p=self.js.gBrowser.addTab(url)
-  p.url=url
-  self.moveWindow(id=self.js.Array.indexOf(self.js.gBrowser.tabs,p))
+  p=self.js.clifox.addTab(url,self.page)
+#  p.url=url
+  self.js.clifox.selectTab(p)
+#  self.moveWindow(id=self.js.Array.indexOf(self.js.gBrowser.tabs,p))
 
  def nextWindow(self):
   self.moveWindow(1)
@@ -913,7 +769,8 @@ length: the maximum length for this text entry (element.attr=maxlength is the co
   self.saveWindow()
   _id=id
   id=self.windex
-  tl=self.js.gBrowser.tabs.length-1
+  tabs=self.js.clifox.listAllTabs()
+  tl=tabs.length-1
   if direction and _id==None:
    if direction>0:
     id=id+1 if id<tl else 0
@@ -922,8 +779,9 @@ length: the maximum length for this text entry (element.attr=maxlength is the co
   if _id!=None:
    id=_id
   self.windex=id
-  p=self.js.gBrowser.tabs[id]
-  self.js.gBrowser.selectedTab=p
+  p=tabs[id]
+  self.js.clifox.selectTab(p)
+#self.js.gBrowser.selectedTab=p
   log("selectedTab set")
 
  def handleLocalKey(self,k,*args):
@@ -941,7 +799,7 @@ length: the maximum length for this text entry (element.attr=maxlength is the co
     self.setStatus("KeyboardError:%s" % (e,))
 
  def handleEvent(self,ev):
-#  self.events.append(ev)
+  self.events.append(ev)
 #  log("mainWindow:event:",str(ev))
   try:
    n=ev['t']
@@ -972,7 +830,7 @@ length: the maximum length for this text entry (element.attr=maxlength is the co
     self.newWindow(getattr(self,"start_url",config.get("homepage","http://bmcginty.hopto.org/form.html")))
    else:
     self.moveWindow(id=0)
-    self.restoreWindow(self.js.gBrowser.tabs[0])
+    self.restoreWindow(self.js.clifox.listAllTabs()[0])
   while 1:
    time.sleep(0.01)
    self.js.ref.recv(0.01)
@@ -988,13 +846,26 @@ length: the maximum length for this text entry (element.attr=maxlength is the co
     self.handleEvent(event)
     continue
 
+def parseArgs():
+ parser=argparse.ArgumentParser()
+ parser.add_argument("-H","--hostname",action="store",dest="hostname",help="address or name of host where firefox and the clifox extension are running")
+ parser.add_argument("--debug",action="store_true",dest="debug",help="run python debugger when a page loads")
+ parser.add_argument("homepage",action="store",nargs="?",help="homepage url")
+# parser.add_argument("--profile",action="store_true",dest="profile",help="enable profiler")
+ config=parser.parse_args()
+ return config
+
 def main2():
- global quitFlag
+ global quitFlag,argConfig
  quitFlag=0
+ config=parseArgs()
+ argConfig=config
+ if config.debug:
+  utils.log("debugging noted, port will open on 7777 when page loads")
+# import profile
  warnings.simplefilter("ignore")
- j,q=mozCom.initCliFox(hostname="192.168.1.187")
-# j,q=mozCom.initCliFox(hostname="localhost")
- curses.wrapper(ActiveWindow,jsQ=q,jsRoot=j,start_url=[i for i in sys.argv if ":" in i][0] if [i for i in sys.argv if ":" in i] else None)
+ j,q=mozCom.initCliFox(hostname=config.hostname)
+ curses.wrapper(ActiveWindow,jsQ=q,jsRoot=j,start_url=config.homepage)
 
 if __name__=='__main__':
  main2()

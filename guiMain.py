@@ -286,7 +286,7 @@ class gui(forms):
   ret=[]
   lv=0
   self.js.tmp=root
-  res=self.js.ref.eval('repl.accView(tmp)')[0]
+  res=self.js.ref.eval('clifox.accView(tmp)')
   log("res:",res)
   ii=-1
   jm=self.js.ref.map
@@ -304,7 +304,8 @@ class gui(forms):
  def iterNodes(self,root):
   self.js.tmp=root
   lc=[]
-  res=self.js.ref.eval("repl.getDocJson(tmp)")[0]
+  res=self.js.ref.eval("clifox.getDocJson(tmp)")
+#  log("clifox:res",str(res))
   ii=-1
   jm=self.js.ref.map
   jr=self.js.ref.rMap
