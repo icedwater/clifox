@@ -1,3 +1,0 @@
-#!/bin/bash
-xvfb-run -w 0 ~/ff/ffsdk/bin/cfx -b ~/programming/clifox/ff/firefox/firefox run 2>&1 | tee o
-
