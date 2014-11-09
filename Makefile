@@ -2,7 +2,7 @@
 dev:
 	@echo "setting up development environment"
 	@echo "the addon sdk for extension development will be downloaded, and symlinked into your \"$${HOME}/bin\" directory"
-	@if [ ! -d ]; then mkdir devEnvironment; fi
+	@if [ ! -d "devEnvironment" ]; then mkdir devEnvironment; fi
 	@make --no-print-directory -f ../Makefile -C devEnvironment dev2
 dev2:
 	@if [ ! -f "addonsdk.tgz" ];\
