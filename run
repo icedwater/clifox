@@ -16,7 +16,7 @@ if [ "$ffcode" == "0" ]
 then
 cd extension
 xvfb-run -w 0 cfx -b "${ff}" run 2>&1 | tee ../ firefox.log &
-pid=$?
+pid=$!
 echo "running xvfb and firefox with pid ${pid}"
 else
 echo "The firefox binary could not be located. Please install Firefox from your systems package repositories."
