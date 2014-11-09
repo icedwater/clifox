@@ -1,0 +1,98 @@
+Clifox consists of several components.
+All the below paths are relative to the root of this project directory.
+
+Overview:
+Clifox has a Python component, a Javascript component, and a language bridge.
+
+Javascript:
+The Javascript component runs inside Firefox propper like a typical extension.
+It opens a socket, either TCP or file based, to communicate with the Python component.
+It manages connection lists, open windows and tabs, webpage notifications, and GUI popups.
+It also contains code for parsing a webpage, or part of a webpage, into a structure that the Python component can parse.
+
+Python:
+The Python component holds the user interface that a Clifox user interacts with.
+When a user runs Clifox, this Python component connects to the Javascript component.
+When it receives a notification of a new webpage being displayed, a tab switch, or the like, it displays a representation of this content to the user.
+
+Walkthrough:
+For instance, let's take the example of a new webpage being displayed.
+The user presses "g", the default keystroke to open a new url.
+Python opens a text-entry box for the user to enter a URL.
+The user enters the URL, and presses enter.
+Python tells the Javascript component to load this new url into the current tab.
+Firefox begins the standard loading process.
+When the webpage is fully loaded, the Javascript component is notified that the loading process is complete.
+Javascript sends this event notification to Python.
+Python sees that a new webpage is being displayed.
+It requests a parsed version of the page from Javascript.
+Javascript moves through the webpage, collecting a list of all visible nodes.
+For each node, it gets a standard list of attributes as well.
+For instance, links have their href attribute collected, and all img elements have their alt attributes collected.
+This visible-nodes-and-attributes structure is returned to Python.
+Python moves through this structure, placing each element on it's own y,x coordinate set.
+As an example, if we find a link, we'll typically place it on the next available point that is at the beginning of a line,.
+If we're in a list, and find a link, however, we don't put it on it's own line, because it's as much a part of the list as it is it's own element.
+If we encounter a link, and we've already placed text on our current line, we put the link on the next line down, so that it can be differentiated from the text before it before it.
+When Clifox is done parsing this structure into memory,
+it paints one screen length worth of data to the screen at a time, and allows the user to interact with the webpage.
+As a user moves through the webpage, using arrow keys or other hotkeys, the current element is tracked.
+If the user hits enter on a link, Python calls Javascript code to inform Firefox that that element has been clicked.
+At that point, the cycle starts anew.
+If a user hits enter on a form element, Python displays the appropriate entry interface, and sends the users response back to the webpage.
+Unfortunately, when the response is sent, we're not executing all appropriate DOM events, e.g. onchange, onselect, onkeydown, onkeyup, etc.
+This needs to be looked into at a later date.
+
+Bridge:
+Code in Python and Javascript allows objects to be proxyed between both languages.
+Strings, numbers, and the like are sent as raw JSON.
+Object references, however, are saved into a session-specific map, with each object having it's own unique ID.
+Note that the below notes regarding session-specific references are planned to change shortly, so that each connection has it's own full list of objects.
+Now, session-specific might better be called one-or-more-connections-shared-broken.
+(To be clear, multiple connections are _not currently supported.
+To fix this, we have to remove all object['$clifox'] lookups, and probably move object reference lists into document-specific buckets for speed.
+This way, object ID's are not cached across concurrent sessions.)
+By session-specific, we mean that each time all clients have disconnected (or none have connected),
+and a client reconnects, all object references must be recomputed.
+This might seem like a time consuming undertaking, if we assume that every element in a webpage has to be mapped, so that Python can interact with it.
+However, in practice, this is relatively quick.
+
+files:
+/extension:
+This directory holds code for the Javascript component of Clifox.
+/extension/lib/clifox.js:
+This is the file holding all of the actual code.
+Comments should be explanatory,
+but notes should be added to this file whenever something is encountered that can not be made clear by context or in-code notes in _that file.
+/clifox:
+The main Python file used for launching clifox.
+This file holds the main interaction class, and is where all Javascript events are sent to.
+/mozCom.py:
+The code for the Python-side language bridge.
+This file holds all code pertaining to Javascript object proxying, as well as socket handling for said proxying and language bridging.
+/guiObjects.py:
+Input interfaces for any requested GUI tyeps.
+This file holds code to create and display numerous GUI interfaces,
+including single input lines, multi-line edit boxes, checkboxes, listboxes and treeviews, and more.
+/utils.py:
+Various utility functions.
+Functions for use across clifox, e.g. the "log" function, that will write almost anything to the clifox.log file.
+/guiMain.py:
+Classes for handling the display of webpage content.
+This file holds code for displaying webpage content to the active screen.
+It also holds code for saving and restoring the current screen, for use when an input interface takes up more than a single line of space.
+/contentParser.py:
+Takes content from the javascript JSON format and parses it into a y,x list.
+/configParser.py:
+Parses clifox.conf into a fully usable config object.
+/codelog.py:
+Marks or unmarks Clifox python code for logged timings.
+It is recommended to use prof.sh below.
+If you have code that appears to be running slowly on the Python side,
+codelog.py can insert code for many python functions that will time those functions on subsequent runs of clifox.
+/prof.sh:
+Runs code under a profiler.
+Given the first argument as an application, prof.sh takes the first argument, and subsequent arguments,
+treats each argument as a filename, and enables logging for that filename.
+It then runs the application specified in the first argument, shows the displayed timing results,
+and cleans the logging statements from the files given as arguments.
