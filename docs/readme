@@ -22,7 +22,15 @@ If you get a path printed from this command, all is well.
 If you don't get any output,
 please send your linux distribution name and release version to us, as well as the name of the package you installed to fulfill the Firefox role.
 (Read the docs/support file for contact information.)
-Run the file ./install.sh in the root directory of this code.
+Install the extension wrapper (as we're still trying to get the code together to force clifox to run automatically).
+Run:
+make dev
+Create the ~/.clifox directory.
+run:
+mkdir ~/.clifox
+Copy the sample config:
+cp clifox.conf ~/.clifox/
+Ignore this line as of now. It will replace the above steps. Run the file ./install.sh in the root directory of this code.
 
 Run:
 
@@ -40,59 +48,4 @@ Key bindings can be found in ~/.clifox/clifox.conf.
 Logs are in ~/.clifox/clifox.log.
 
 Happy browsing.
-
-Custom Notes
-
-The install script  will do the following:
-1. Download the self-extracting Firefox from mozilla.org (latest stable version).
-example:
-wget "ftp://ftp.mozilla.org/pub/firefox/releases/latest/linux-x86_64/en-US/firefox-19.0.2.tar.bz2" # It's up to 20.0.2.
-tar -jxf "firefox-*.tar.bz2"
-
-2. cd into firefox directory and run xvfb-run "/path/to/firefox"
-
-3. Run Firefox to initialize the config directorys.
-
-4. Run again to insure initialization.
-
-5. Wait for about ten seconds.
-
-6. Kill the xvfb-run firefox application (ctrl-c).
-
-Note. Symlinks are recommended for the following steps, so that
-changes to the supported configs are reflected in your Firefox. Please
-realize that this will open your Firefox version to any
-vulnerabilities created by the developer's configs.
-
-Note. The reference to random.id in the following statements is to
-indicate a randomly generated id used in file names and directories.
-
-7. link the prefs.js file from the firefox folder in the root of this
-repo to your newly created profile folder.  e.g. ln -sf
-~/src/clifox/firefox/prefs.js
-~/.mozilla/firefox/randomid.default/prefs.js
-
-8. Link the mozrepl folder into your Mozilla extensions folder with
-the mozilla recommended format. (No, this is not your standard
-symlink. It is a path written to a textfile.)  e.g. 
-echo "$(pwd)/mozrepl" >
-~/.mozilla/firefox/randomid.default/extensions/mozrepl\@hyperstruct.net
-
-9. Hope fervently.
-
-10. Run:
-xvfb-run /dir/to/firefox/firefox
-You should see a message such as:
-
-"I, MOZREPL : Listening : 127.0.0.1:4242"
-
-If not, something is wrong with the link to mozrepl, the prefs.js
-file, or your version of firefox.
-
-11. Run:
-mkdir ~/.clifox
-./clifox 'http://www.linux-speakup.org/'
-
-If all goes well, you should be shown the homepage for the
-linux-speakup project. Errors are placed in ~/.clifox/clifox.log.
 
