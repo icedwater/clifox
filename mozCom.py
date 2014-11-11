@@ -1,4 +1,5 @@
-import os,sys,select,socket,time,Queue,urllib,configParser
+import os,sys,select,socket,time,Queue,urllib
+import utils,configParser
 try:
  try:
   try:
@@ -330,7 +331,7 @@ def initCliFox(hostname="localhost",port=4242,q=None,js=None,ignoreErrors=0):
    sys.exit(1)
  return j,eventQ
 
-fh=open("mozCom.js","rb")
+fh=open(utils.path+"/mozCom.js","rb")
 mzjs=fh.read()
 fh.close()
 mzjs=mzjs.strip()

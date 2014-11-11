@@ -4,7 +4,10 @@ import sys
 reload(sys)
 sys.setdefaultencoding('utf-8')
 import os,os.path,argparse
-path=os.path.realpath(__file__).rsplit(os.sep,1)[0]+"/modules"
+path=os.path.realpath(__file__).rsplit(os.sep,1)[0]
+import utils
+utils.path=path
+path+="/modules"
 sys.path.append(path)
 import configParser
 config=configParser.config
