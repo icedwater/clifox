@@ -1,5 +1,6 @@
 import os,traceback
 import StringIO as stringio
+path=os.path.realpath(__file__).rsplit(os.sep,1)[0]
 def Filename(fn="",root=None):
  if not root:
   root=os.path.expanduser("~/.clifox/")
