@@ -4,10 +4,8 @@ import sys
 reload(sys)
 sys.setdefaultencoding('utf-8')
 import os,os.path,argparse
-path=os.path.realpath(__file__).rsplit(os.sep,1)[0]
 import utils
-utils.path=path
-path+="/modules"
+path=utils.path+"/modules"
 sys.path.append(path)
 import configParser
 config=configParser.config
@@ -20,7 +18,8 @@ import StringIO as stringio
 import contentParser as cp
 import guiMain
 import mozCom
-from guiObjects import *
+import guiObjects
+#from guiObjects import *
 from utils import log,generate_error_report
 
 def makeCleanFunctionName(s):
@@ -76,6 +75,7 @@ jsQ points to the queue where JS generated events are sent
 jsRoot points to the root class of js
 """
   log("thread:init:activeWindow")
+  self.handlers=[self]
   self.statusbar=1
   self.lastMessage=""
   self.daemon=1
@@ -141,6 +141,39 @@ jsRoot points to the root class of js
    if config.limitMessages:
      self.updateStatus("No previous %s" % s)
 
+ def gui(self,e):
+  g=self.js.clifox.handler.s.clifox.gui
+  d=g[0]
+  e=d.elements
+  elements=[]
+  for i in e:
+   oWriteable=0 if i[0]=="out" else 1
+   type=i[1]
+   params={}
+   params["proxy"]="value"
+   if type in ["text","title","password"]:
+    oType=guiObjects.Readline
+    params["prompt"]=i[2]
+    params["text"]=i[3]
+    if type=="password": params['echo']='*'
+    if not oWriteable: params['readonly']=1
+   elif type=="list":
+    oType=guiObjects.Listbox
+    params["items"]=i[2]
+    params['value']=i[3]
+   elif type=="checkbox":
+    oType=guiObjects.Checkbox
+    params['checked']=i[3]
+    params['prompt']=i[2]
+   elif type=="button":
+    oType=guiObjects.Button
+    params['prompt']=i[2]
+   else:
+    continue
+   elements.append((oType,params))
+  dlg=guiObjects.Dialog(screen=self.screen,base=self,y=0,x=0,controls=elements)
+  self.handlers.append(dlg)
+
  def onStateChangeAll(self,e):
   self.events.append(e)
 
@@ -175,7 +208,6 @@ jsRoot points to the root class of js
 
  def tabSelect(self,e):
   """firefox fires this event on tab switch"""
-  self.events.insert(0,e)
   log("tabSelect")
 #   self.page.linkedBrowser.ref.jsrefresh()
   if self.page==e.target:
@@ -306,6 +338,12 @@ used, e.g. when reading a webpage as a whole document.
   fn=self.gFileBrowser()
   self.dom.location.href=fn
 
+ def closePage(self):
+  try:
+   self.page.ownerDocument.defaultView.gBrowser.removeCurrentTab()
+  except:
+   pass
+
  def navigate(self,c=""):
   go=self.prompt(prompt="url",y=self.entry, history=None)
   if go=='': return
@@ -357,9 +395,9 @@ used, e.g. when reading a webpage as a whole document.
   if y==None:
    y=self.entry
 #change to this once we have separation between form fields and their contents for rendering
-   y=self.screen.getyx()[0]
+#   y=self.screen.getyx()[0]
   pos=self.screen.getyx()
-  cls=Readline(screen=self.screen,prompt=prompt,base=self,y=y,x=0,history=history,text=text,echo=echo)
+  cls=guiObjects.Readline(screen=self.screen,prompt=prompt,base=self,y=y,x=0,history=history,text=text,echo=echo)
   while not cls.done:
    c=self.screen.getch()
    handled=cls.handleKey(c)
@@ -451,7 +489,8 @@ used, e.g. when reading a webpage as a whole document.
  def doClick(self,e,method="click"):
   evt=self.dom.document.createEvent("MouseEvents")
   evt.initMouseEvent(method, True, True, self.dom, 0, 0, 0, 0, 0, False, False, False, False, 0, None)
-  return 0 if e.dispatchEvent(evt) else 1
+  self.js.clifox.async(e,e.dispatchEvent,evt)
+#  return 0 if e.dispatchEvent(evt) else 1
 
  def handleFormInput(self,element):
   sn,y,x=self.screenNum,self.screenPos,self.screenPosX
@@ -787,10 +826,11 @@ used, e.g. when reading a webpage as a whole document.
 #self.js.gBrowser.selectedTab=p
   log("selectedTab set")
 
- def handleLocalKey(self,k,*args):
+ def handleKey(self,k,*args):
   if k in self.keys:
    try:
     exec(self.keys[k])
+    return 1
    except Exception,e:
     fp = stringio.StringIO()
     traceback.print_exc(file=fp)
@@ -800,6 +840,7 @@ used, e.g. when reading a webpage as a whole document.
     log("KBDError",v)
 #~~
     self.setStatus("KeyboardError:%s" % (e,))
+  return None
 
  def handleEvent(self,ev):
   self.events.append(ev)
@@ -829,6 +870,7 @@ used, e.g. when reading a webpage as a whole document.
 
  def run(self):
   if not getattr(self,"page",None):
+   self.page=self.js.clifox.getActiveTab()
    if getattr(self,"start_url","")!=None:
     self.newWindow(getattr(self,"start_url",config.get("homepage","http://bmcginty.hopto.org/form.html")))
    else:
@@ -839,8 +881,9 @@ used, e.g. when reading a webpage as a whole document.
    self.js.ref.recv(0.01)
    c=self.screen.getch()
    if c!=-1:
-    if c in self.keys:
-     self.handleLocalKey(c)
+    for handler in self.handlers[::-1]:
+     if handler.handleKey(c):
+      break
    try:
     event=self.jsQ.get(block=0)
    except Queue.Empty:
