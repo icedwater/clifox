@@ -1,4 +1,5 @@
 import Queue,sys
+import utils
 import mozCom
 hostname="localhost"
 a=mozCom.initCliFox(hostname=hostname if len(sys.argv)<2 else sys.argv[1],q=Queue.Queue())
