@@ -470,12 +470,6 @@ class gui(forms):
   self.pagePosition()
   return None
 
- def closePage(self):
-  try:
-   self.js.gBrowser.removeCurrentTab()
-  except:
-   pass
-
  def searchPage(self,direction="forward"):
   pos=self.getScreenAbsolutePosition(self.screenNum,self.screenPos)
   focus=self.getFocusedElement()
