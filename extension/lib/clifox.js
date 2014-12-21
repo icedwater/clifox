@@ -58,7 +58,11 @@ clifoxJsonRpc.prototype = {
     inMap: function(obj) {
         var where, rm, c;
 //error("xx:inMap",obj);
+try {
         where = obj['$clifox'];
+} catch(e) {
+where=null;
+}
         //clifox.print({"m":"w","a":["inMap",obj.toString()]});
         if (where) {
             return where;
@@ -735,7 +739,15 @@ g={"elements":elems,
 "extras":extras,
 };
 this.gui.push(g);
+this.notifySessions("gui");
 return g;
+};
+clifoxRunner.prototype.notifySessions=function(m) {
+var i,s;
+s=this.sessions;
+for(i=0;i<s.length;i++) {
+s[i].handler.sb.clifox.notify(m);
+}
 };
 clifoxRunner.prototype.removeGui=function(o) {
 var i;
