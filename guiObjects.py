@@ -5,6 +5,8 @@ from utils import log
 
 class GuiObject(object):
  done=0
+#valueProxy is None|String, where String can be used like getattr(self._value,String)
+ valueProxy=None
  def beepIfNeeded(self):
   if self.base.config.beeps:
    curses.beep()
@@ -31,11 +33,13 @@ enter selects default button or displays error if not one
   self.screen=screen
   self.y,self.x=y,x
   self._controls=controls
+  self.controls=[]
   self.initialDraw()
+  self.draw()
 
  def initialDraw(self):
   for i in xrange(0,len(self._controls)):
-   co=controls[i]
+   co=self._controls[i]
    c=co[0](screen=self.screen,base=self.base,y=i,**co[1])
    self.controls.append(c)
   self.controlIndex=0
@@ -45,6 +49,7 @@ enter selects default button or displays error if not one
    i.draw()
 
  def handleKey(self,c):
+  ret=1
   if c==curses.KEY_DOWN:
    if self.controlIndex>=len(self.controls):
     self.beepIfNeeded()
@@ -60,7 +65,37 @@ enter selects default button or displays error if not one
    else:
     self.controlIndex-=1
   else:
-   return self.controls[self.controlIndex].handleKey(c)
+   ret=self.controls[self.controlIndex].handleKey(c)
+  return ret
+
+class Button(GuiObject):
+ @property
+ def selected(self):
+  return self.value if not self.valueProxy else getattr(self.value,self.valueProxy)
+ @selected.setter
+ def selected(self,x):
+  return setattr(self,"value",x) if not self.valueProxy else setattr(self.value,self.valueProxy,x)
+
+ def __init__(self,screen=None,base=None,y=1,x=0,prompt="Button",proxy=None):
+  self.valueProxy=proxy
+  self.base=base
+  self.screen=screen
+  self.y,self.x=y,x
+  self.prompt=prompt
+  self.selected=0
+  self.draw()
+
+ def draw(self):
+  s="{%s}" % (self.prompt,)
+  self.screen.addstr(self.y,self.x,s)
+  self.screen.refresh()
+
+ def handleKey(self,k):
+  if k==10:
+   self.done=1
+   self.selected=1
+   return 1
+  return None
 
 class Checkbox(GuiObject):
  """checkbox, whose value can be 1 or 0
@@ -69,7 +104,15 @@ base:base object
 y,x: coordinates for the top left point of this object on screen
 prompt: the text shown as the label for this control, set to None if the inPage setting is to be used with text from the current line
 """
- def __init__(self,screen=None,base=None,y=1,x=0,prompt="no prompt",checked=0,):
+ @property
+ def checked(self):
+  return self.value if not self.valueProxy else getattr(self.value,self.valueProxy)
+ @checked.setter
+ def checked(self,x):
+  return setattr(self,"value",x) if not self.valueProxy else setattr(self.value,self.valueProxy,x)
+
+ def __init__(self,screen=None,base=None,y=1,x=0,prompt="no prompt",checked=0,proxy=None):
+  self.valueProxy=proxy
   self.screen=screen
   self.base=base
   self.y,self.x=y,x
@@ -102,8 +145,17 @@ text: the default text, entered as if the user had typed it directly
 echo: acts as a mask for passwords (set to ' ' in order to not echo any visible character for passwords)
 length: the maximum length for this text entry (element.attr=maxlength is the corresponding html attribute)
 delimiter: the delimiter between prompt and text
+readonly: whether to accept new text
 """
- def __init__(self,screen=None, base=None, y=1, x=0, history=[], prompt="input",text="",echo=None,length=None,delimiter=":"):
+ @property
+ def text(self):
+  return self.value if not self.valueProxy else getattr(self.value,self.valueProxy)
+ @text.setter
+ def text(self,x):
+  return setattr(self,"value",x) if not self.valueProxy else setattr(self.value,self.valueProxy,x)
+
+ def __init__(self,screen=None, base=None, y=1, x=0, history=[], prompt="input",text="",echo=None,length=None,delimiter=":",readonly=0,proxy=None):
+  self.valueProxy=proxy
   self.done=0
   self.base=base
   self.screen=screen
@@ -114,6 +166,7 @@ delimiter: the delimiter between prompt and text
   self.prompt=prompt
   self.delimiter=delimiter
   self.echo=echo
+  self.readonly=readonly
   self.length=length
 #prompt and delimiter
   self.s="%s%s" % (self.prompt,self.delimiter,) if self.prompt else ""
@@ -171,12 +224,16 @@ delimiter: the delimiter between prompt and text
  def handleKey(self,c):
   if 1:
    if curses.ascii.isprint(c):
-    t=chr(c)
-    if not self.insertMode:
-     self.currentLine[self.ptr]=t
+    if self.readonly:
+     self.beepIfNeeded()
+     self.setStatus("This is a read only line. Text can not be modified.")
     else:
-     self.currentLine.insert(self.ptr,t)
-     self.ptr+=1
+     t=chr(c)
+     if not self.insertMode:
+      self.currentLine[self.ptr]=t
+     else:
+      self.currentLine.insert(self.ptr,t)
+      self.ptr+=1
    elif c == 3:  # ^C
     self.setStatus("Input aborted!")
     self.currentLine=[]
@@ -280,7 +337,8 @@ class naEditbox(object):
  Move operations do nothing if the cursor is at an edge where the movement is not possible.  The following synonyms are supported where possible:
  KEY_LEFT = Ctrl-B, KEY_RIGHT = Ctrl-F, KEY_UP = Ctrl-P, KEY_DOWN = Ctrl-N, KEY_BACKSPACE = Ctrl-h
  """
- def __init__(self, screen=None, base=None, y=1, x=0,text="edit field"):
+ def __init__(self, screen=None, base=None, y=1, x=0,text="edit field",proxy=None):
+  self.valueProxy=proxy
   self.base=base
   self.default="Edit Field"
   [setattr(self,k,v) for k,v in kw.items()]
@@ -474,23 +532,32 @@ class naEditbox(object):
   return status
 
 class Listbox(GuiObject):
- def __init__(self,screen=None,base=None,y=0,x=0,height=10,title=None,values=[],keysWaitTime=0.4):
+ @property
+ def where(self):
+  return self.value if not self.valueProxy else getattr(self.value,self.valueProxy)
+ @where.setter
+ def where(self,x):
+  return setattr(self,"value",x) if not self.valueProxy else setattr(self.value,self.valueProxy,x)
+
+ def __init__(self,screen=None,base=None,y=0,x=0,height=10,title=None,items=[],value=0,keysWaitTime=0.4,proxy=None):
+  self.valueProxy=proxy
   self.screen=screen
   self.base=base
   self.y,self.x=y,x
   self.title=title
-  if values and type(values[0]) not in (tuple,list):
-   self.values=zip(xrange(len(values)),values)
+  if items and type(items[0]) not in (tuple,list):
+   self.items=zip(xrange(len(items)),items)
   else:
-   self.values=values
+   self.items=items
   self.keys=[]
   self.keysWaitTime=keysWaitTime
-  self.where=0
+#self.where uses self.value
+  self.value=value
   self.height=height
   self.draw()
 
  def draw(self):
-  show=self.values[self.where:self.where+self.height]
+  show=self.items[self.where:self.where+self.height]
   for idx,itm in zip(xrange(self.y,self.y+self.height),show):
    self.screen.move(idx,0)
    self.screen.clrtoeol()
@@ -507,7 +574,7 @@ class Listbox(GuiObject):
   keys="".join([i[1] for i in self.keys])
   keys=keys.lower()
   j=-1
-  for i in self.values:
+  for i in self.items:
    j+=1
    if str(i[1]).lower().startswith(keys):
     self.where=j
@@ -523,15 +590,15 @@ class Listbox(GuiObject):
    else:
     self.where-=1
   elif c==curses.KEY_DOWN:
-   if self.where>=len(self.values):
+   if self.where>=len(self.items):
     self.beepIfNeeded()
     self.setStatus("Bottom of list.")
-    self.where=len(self.values)-1
+    self.where=len(self.items)-1
    else:
     self.where+=1
   elif c==10:
    self.done=1
-   self.selected=self.values.index(self.values[self.where])
+   self.selected=self.items.index(self.items[self.where])
   else:
    return None
   self.draw()
