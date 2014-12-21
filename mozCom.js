@@ -16,6 +16,38 @@ Array.prototype.indexOf = function(obj) {
 
 clifox.status = [];
 
+clifox.runnable=function(cf,obj,func,args) {
+this.id=clifox.justAddMap(this);
+this.obj=obj;
+this.func=func;
+this.args=args;
+this.clifox=cf;
+this.ret=null;
+};
+clifox.runnable.prototype={
+run:function(t) {
+t.ret=t.func.apply(t.obj,t.args);
+t.clifox.print({
+"m":"e",
+"t":"async",
+"a":[t.id],
+});
+},
+};
+
+clifox.async=function() {
+var v,obj,func,args,a;
+a=arguments;
+obj=a[0];
+func=a[1];
+args=[];
+for(var i=2;i<a.length;i++) {
+args.push(a[i]);
+}
+v=new clifox.runnable(clifox,obj,func,args);
+clifox.getActiveTab().ownerDocument.defaultView.setTimeout(v.run,0,v);
+};
+
 clifox.onWindowCreate = function(w) {};
 clifox.onWindowDestroy = function(w) {
 if(w.mo) {
@@ -42,6 +74,14 @@ w.mo.window=w
         "characterData": 1,
         "subtree": 1
     });
+};
+clifox.notify = function(type,obj) {
+var a;
+clifox.print({
+"m":"e",
+"t":type?type:obj.type,
+"a":[clifox.addMap(obj?obj:null)],
+});
 };
 clifox.note = function() {
     var args, i;
@@ -621,10 +661,11 @@ clifox.getActiveTab = function() {
     //uses focus manager to get window in focus (foreground)
     //gets selectedTab from that window
     var fm;
-    if (!clifox.fm) {
-        clifox.fm = Cc["@mozilla.org/focus-manager;1"].getService(Ci.nsIFocusManager);
-    }
+try {
     return clifox.fm.activeWindow.gBrowser.selectedTab;
+} catch(e) {
+return clifox.fm.activeWindow;
+}
 };
 clifox.getWms = function() {
     if (this.wms) {
@@ -633,11 +674,14 @@ clifox.getWms = function() {
     clifox.wms = Cc["@mozilla.org/appshell/window-mediator;1"].getService(Ci.nsIWindowMediator);
     return clifox.wms;
 };
-clifox.listAllWindows = function() {
+clifox.listAllWindows = function(t) {
     var wms, windows;
     windows = [];
     wms = clifox.getWms();
-    windowsEnum = wms.getEnumerator("navigator:browser");
+//    if(t==null) {
+//t="navigator:browser"
+//}
+    windowsEnum = wms.getEnumerator(t);
     while (windowsEnum.hasMoreElements()) {
         windows.push(windowsEnum.getNext());
     }
@@ -665,5 +709,8 @@ clifox.kill = function() {
 clifox.init = function() {
     clifox.obs = new clifox.observer();
     clifox.gl = new clifox.GuiListener();
+    if (!clifox.fm) {
+        clifox.fm = Cc["@mozilla.org/focus-manager;1"].getService(Ci.nsIFocusManager);
+    }
 };
 clifox.init();
