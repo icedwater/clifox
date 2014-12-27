@@ -10,6 +10,7 @@ def defaultConfig():
  config.pagePosition="percentage"
  config.caseSensitiveSearch="false"
  config.showInstantPage=0
+ config.dbg=0
  config.mainWindowKeys={
 ord("`"):"self.nextWindow()",
 ord("q"):"self.quit()",
