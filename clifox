@@ -184,13 +184,21 @@ jsRoot points to the root class of js
 #  if self.dom.document.ref.id!=old:
 #   return
   self.events.append(e)
-  self.setStatus("event onStateChange: %s" % (self.dom.location.href))
+  self.dom.ref.jsrefresh()
+  try:
+   self.setStatus("event onStateChange: %s" % (self.dom.location.href))
+  except Exception,err:
+   generate_error_report(err)
 #  self.page.linkedBrowser.ref.jsrefresh()
 #  self.dom=self.page.linkedBrowser.contentDocument.defaultView
 #  self.pageRefreshData()
   self.restoreWindow(self.page)
   if "youtube.com" in self.dom.location.host and ("youtube.com/embed/" in self.dom.location.href or "youtube.com/watch" in self.dom.location.href):
    try:
+    h=self.dom.location.href
+    if "/embed" in h and "autoplay" not in h:
+     self.dom.location.href=h+("?" if "?" not in h else "&")+"autoplay=1"
+     return
 #    self.dom.wrappedJSObject.yt.player.getPlayerByElement("player").playVideo()
     b=self.dom.wrappedJSObject.document.body
     name="player-api"
@@ -198,8 +206,8 @@ jsRoot points to the root class of js
     x.innerHTML='<a onclick="javascript:yt.player.getPlayerByElement(\'%s\').playVideo();">play video</a>' % (name,)
     x.innerHTML+='<a onclick="javascript:yt.player.getPlayerByElement(\'%s\').stopVideo();">stop video</a>' % (name,)
     self.doPaint(1)
-   except:
-    pass
+   except Exception,e:
+    generate_error_report(e)
 
  def mutation(self,e):
   return
@@ -811,7 +819,10 @@ used, e.g. when reading a webpage as a whole document.
   self.saveWindow()
   _id=id
   id=self.windex
-  tabs=self.js.clifox.listAllTabs()
+  lt=self.js.clifox.listAllTabs
+#  log("lt",lt['$clifox'])
+  tabs=lt()
+#  log("tabs",tabs['$clifox'])
   tl=tabs.length-1
   if direction and _id==None:
    if direction>0:
@@ -822,9 +833,11 @@ used, e.g. when reading a webpage as a whole document.
    id=_id
   self.windex=id
   p=tabs[id]
+#  log("tab",p['$clifox'])
   self.js.clifox.selectTab(p)
 #self.js.gBrowser.selectedTab=p
-  log("selectedTab set")
+#  log("keys",self.js.Object.keys(self.js.clifox.map).toString())
+#  log("selectedTab",id,"set",str(p.linkedBrowser.contentDocument.location.href))
 
  def handleKey(self,k,*args):
   if k in self.keys:
@@ -871,11 +884,13 @@ used, e.g. when reading a webpage as a whole document.
  def run(self):
   if not getattr(self,"page",None):
    self.page=self.js.clifox.getActiveTab()
+   log("page",self.page.toString())
    if getattr(self,"start_url","")!=None:
     self.newWindow(getattr(self,"start_url",config.get("homepage","http://bmcginty.hopto.org/form.html")))
    else:
-    self.moveWindow(id=0)
-    self.restoreWindow(self.js.clifox.listAllTabs()[0])
+    wid=self.js.clifox.listAllTabs().indexOf(self.page)
+    self.moveWindow(id=wid)
+    self.restoreWindow(self.page)
   while 1:
    time.sleep(0.01)
    self.js.ref.recv(0.01)
