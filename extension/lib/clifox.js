@@ -451,9 +451,11 @@ for(i in m)
 try {
 if(m[i].value['$clifox'])
 {
+m[i].value['$clifox']=null;
 delete m[i].value['$clifox'];
 }
 } catch(e) {
+error("can't delete $clifox for",i);
 }
 }
 delete this.dispatcher.rMap;
