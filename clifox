@@ -201,7 +201,7 @@ jsRoot points to the root class of js
      return
 #    self.dom.wrappedJSObject.yt.player.getPlayerByElement("player").playVideo()
     b=self.dom.wrappedJSObject.document.body
-    name="player-api"
+    name="player-api" if "/embed" not in h else "player"
     x=b.insertBefore(self.dom.wrappedJSObject.document.createElement("div"),b.firstChild)
     x.innerHTML='<a onclick="javascript:yt.player.getPlayerByElement(\'%s\').playVideo();">play video</a>' % (name,)
     x.innerHTML+='<a onclick="javascript:yt.player.getPlayerByElement(\'%s\').stopVideo();">stop video</a>' % (name,)
