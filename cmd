@@ -1,4 +1,6 @@
 import Queue,sys
+reload(sys)
+sys.setdefaultencoding("utf-8")
 import utils
 import mozCom
 hostname="localhost"
@@ -11,7 +13,7 @@ root,q=a
 #print root.ref.eval('clifox.map["j4"].name')
 #print root.clifox.selectTab(root.z)
 #print root.ref.eval("clifox.map.toString();for(i in clifox.map){i;};")
-print root.ref.eval(sys.argv[2])
+print root.ref.eval(sys.argv[2].encode('utf-8'))
 sys.exit(0)
 l=[i for i in root.clifox.listAllTabs()]
 print l[0],l[0]['$clifox'],l[0].ref.id
