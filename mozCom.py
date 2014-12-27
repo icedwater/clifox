@@ -76,6 +76,7 @@ class JSClass(object):
   if x in r.vars:
    return r.vars[x]
 #  print x
+#  log("root",r.root,"self",self,"r.id",r.id,"r.map",r.map.keys(),"parent",r.parent)
   if r.root!=self and r.id not in r.map:
    return r.parent[r.name][x]
   if (r.id,x) in r.rMap:
@@ -278,7 +279,11 @@ class JSReference(object):
 
  def jsrefresh(self):
   c=self
-  [c.vars.pop(i) for i in c.vars]
+#  log("clear",c.type,c.parent.ref.type)
+  c.vars.clear()
+  if c.parent.ref.type=="function":
+   log("can't refresh function result, just cleared variables")
+   return
   if c.id in self.map: del self.map[c.id]
   k=(c.parent.ref.id,c.name)
   if k in self.rMap:
