@@ -101,7 +101,7 @@ clifox.addTab = function(url, tab) {
 return t;
 };
 clifox.selectTab = function(t) {
-//    clifox.note("selectTab.t", t.toString());
+    clifox.note("selectTab.t", t.toString());
     t.parentNode.ownerDocument.defaultView.gBrowser.selectedTab = t;
     return t;
 };
@@ -222,7 +222,10 @@ clifox.GuiListener = function() {
     wms.addListener(this);
     windows = clifox.listAllWindows();
     for (i = 0; i < windows.length; i++) {
+try {
         this.onOpenWindow(windows[i]);
+} catch(e) {
+}
     }
 tabs=clifox.listAllTabs();
 for(i=0;i<tabs.length;i++) {
@@ -236,7 +239,10 @@ clifox.GuiListener.prototype = {
         wms.removeListener(this);
         windows = clifox.listAllWindows();
         for (i = 0; i < windows.length; i++) {
+try {
             this.onCloseWindow(windows[i]);
+} catch(e) {
+}
         }
 tabs=clifox.listAllTabs();
 for(i=0;i<tabs.length;i++) {
@@ -660,7 +666,6 @@ clifox.oldInit = function() {
 clifox.getActiveTab = function() {
     //uses focus manager to get window in focus (foreground)
     //gets selectedTab from that window
-    var fm;
 try {
     return clifox.fm.activeWindow.gBrowser.selectedTab;
 } catch(e) {
@@ -693,7 +698,11 @@ clifox.listAllTabs = function() {
     windows = this.listAllWindows();
     for (i = 0; i < windows.length; i++) {
         w = windows[i];
+try {
         wTabs = w.getBrowser().tabContainer.childNodes;
+} catch(e) {
+continue;
+}
         for (i = 0; i < wTabs.length; i++) {
             tabs.push(wTabs[i]);
         }
