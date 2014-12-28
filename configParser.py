@@ -29,5 +29,6 @@ if not os.path.exists(os.path.expanduser('~/.clifox/')):
  os.mkdir(os.path.expanduser('~/.clifox'))
 if os.path.exists(os.path.expanduser('~/.clifox/clifox.conf')):
  execfile(os.path.expanduser('~/.clifox/clifox.conf'))
-if not config.keys():
- defaultConfig()
+for k in defaultConfig:
+ if k not in config:
+  config[k]=defaultConfig[k]
