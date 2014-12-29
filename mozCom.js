@@ -370,7 +370,11 @@ return;
         if ((aStateFlags & Ci.nsIWebProgressListener.STATE_STOP) && (aStateFlags & Ci.nsIWebProgressListener.STATE_IS_WINDOW) && (aWebProgress.DOMWindow == aWebProgress.DOMWindow.top)) {
 //specific to catch pages that are finished loading
 //onStateChange triggers a page refresh
+if(aWebProgress.DOMWindow!=clifox.getActiveTab().linkedBrowser.contentDocument.defaultView) {
+name="onStateChangeAll";
+} else {
             name = "onStateChange";
+}
         } else {
             name = "onStateChangeAll";
         }
