@@ -1,5 +1,7 @@
 import re
 import utils
+import configParser
+config=configParser.config
 log=utils.log
 class parser(object):
 #skip only this top-level element
@@ -23,7 +25,8 @@ supply a list of document elements to be rendered (e.g. from iterNodes)
   """wraps text, respecting spacing and line breaks whenever possible
 """
   width=self.maxx if width==None else width
-  log(":wrap","pre:",pre,"width:",width,"indent:",indent,"width:",width,"text:",text)
+  if config.dbg:
+   log(":wrap","pre:",pre,"width:",width,"indent:",indent,"width:",width,"text:",text)
   start,end=0,0
 #if we're starting to the right of 0, then we have that amount fewer spaces to place text, so remove that amount from @end
   if indent!=None:
@@ -215,7 +218,7 @@ for instance, this function would return false if one was scanning a line with a
 
 class htmlParser(parser):
  def nl(self,idx):
-  """check if there is need for a line break because of existing text on the current line."""
+  """check (and insert if) there is need for a line break because of existing text on the current line."""
   if self.needNewLine():
    self.y+=1
    self.x=0
@@ -234,7 +237,7 @@ For instance, this would be used for a br element, where a line break is mandato
  def iframe(self,idx):
   n=self.lst[idx]
   self.fnl(idx)
-  return "{} frame %s" % (n.src,) if "youtube" in n.src.lower() else ''
+  return "{} frame %s" % (n.src,) if n.src else "{} frame"
  frame=iframe
 
  def endIframe(self,idx):
@@ -278,6 +281,7 @@ For instance, this would be used for a br element, where a line break is mandato
   return '* '
 
  def unknown(self,idx):
+#  return '[unknown-'+str(self.lst[idx].nodeName)+']'
   return ''
 
  def textarea(self,idx):
@@ -290,6 +294,7 @@ For instance, this would be used for a br element, where a line break is mandato
   if nm: c="["+nm+"] "+c
   return c
 
+#text nodes
  def text(self,idx):
   return self.lst[idx].nodeValue
 
@@ -331,6 +336,8 @@ For instance, this would be used for a br element, where a line break is mandato
   self.fnl(idx)
   nt=self.lst[idx].type
   nt=nt[0].upper()+nt[1:].lower()
+  if nt=="Hidden":
+   return ''
   value=getattr(self,"input"+nt,self.inputUnknown)(idx)
   if self.lst[idx].disabled:
    nm="disabled "+nm
@@ -491,3 +498,53 @@ For instance, this would be used for a br element, where a line break is mandato
  def td(self,idx):
   self.nl(idx)
   return ''
+
+class accParser(parser):
+ def dialog(self,idx):
+  return self.lst[idx].name
+
+ def endDialog(self,idx):
+  self.fnl(idx)
+  return ''
+
+ def pagetab(self,idx):
+  self.fnl(idx)
+  return "tab %s" % (self.lst[idx].name,)
+
+ def endPagetab(self,idx):
+  self.fnl(idx)
+  return ''
+
+ def entry(self,idx):
+  self.fnl(idx)
+  return self.lst[idx].value
+
+ def endEntry(self,idx):
+  self.fnl(idx)
+  return ''
+
+ def label(self,idx):
+  ch=self.getChildren(idx)
+  if ch and ch[0].role=="text leaf":
+   self.skip=self.SKIP_CHILDREN
+   return ch[0].name
+  return self.lst[idx].name
+
+ def endLabel(self,idx):
+  self.fnl(idx)
+  return ''
+
+ def pushbutton(self,idx):
+  self.fnl(idx)
+  return "{} button "+self.lst[idx].name
+
+ def endPushbutton(self,idx):
+  self.fnl(idx)
+  return ''
+
+ def unknown(self,idx):
+  return ''
+
+ def endUnknown(self,idx):
+  return ''
+

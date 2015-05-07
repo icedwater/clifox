@@ -1,44 +1,324 @@
 #holds basic GUI structures for use in curses (treeview, listbox, checkbox, ETC)
-#the __init__ and loop methods are the methods for use with the main program, so test by "import guiObjects; test=guiObjects.object(); print test.loop()"
+#the __init__ and loop methods are the methods for use with the main program, so test by "import GuiObjects; test=GuiObjects.object(); print test.loop()"
 import curses,time,os,os.path,string,sys
 from utils import log
 
-class Checkbox(object):
- def __init__(self,**kw):
-  self.title="untitled"
-  self.checked=0
-  [setattr(self,k,v) for k,v in kw.items()]
-  self.screen.clear()
-  self.screen.addstr(0,0,self.title)
+class GuiObject(object):
+ done=0
+#valueProxy is None|String, where String can be used like getattr(self._value,String)
+ valueProxy=None
+ def beepIfNeeded(self):
+  if self.base.config.beeps:
+   curses.beep()
+
+ def setStatus(self,*a,**kw):
+  return self.base.setStatus(*a,**kw)
+
+class Dialog(GuiObject):
+ """control holder
+down and up arrows move through controls
+enter selects default button or displays error if not one
+"""
+ @property
+ def controlIndex(self):
+  return self._controlIndex
+ @controlIndex.setter
+ def controlIndex(self,i):
+  self._controlIndex=i
+  self.controls[self._controlIndex].onFocus()
+  return i
+
+ def __init__(self,screen=None,base=None,y=0,x=0,controls=[]):
+  self.base=base
+  self.screen=screen
+  self.y,self.x=y,x
+  self._controls=controls
+  self.controls=[]
+  self.initialDraw()
+  self.draw()
+
+ def initialDraw(self):
+  for i in xrange(0,len(self._controls)):
+   co=self._controls[i]
+   c=co[0](screen=self.screen,base=self.base,y=i,**co[1])
+   self.controls.append(c)
+  self.controlIndex=0
+
+ def draw(self):
+  for i in self.controls:
+   i.draw()
+
+ def handleKey(self,c):
+  ret=1
+  if c==curses.KEY_DOWN:
+   if self.controlIndex>=len(self.controls):
+    self.beepIfNeeded()
+    self.setStatus("No more controls in this dialog. Please up arrow to the first control.")
+    self.controlIndex=len(self.controls)-1
+   else:
+    self.controlIndex+=1
+  elif c==curses.KEY_UP:
+   if self.controlIndex<=0:
+    self.beepIfNeeded()
+    self.setStatus("This is the first control in this dialog.")
+    self.controlIndex=0
+   else:
+    self.controlIndex-=1
+  else:
+   ret=self.controls[self.controlIndex].handleKey(c)
+  return ret
+
+class Button(GuiObject):
+ @property
+ def selected(self):
+  return self.value if not self.valueProxy else getattr(self.value,self.valueProxy)
+ @selected.setter
+ def selected(self,x):
+  return setattr(self,"value",x) if not self.valueProxy else setattr(self.value,self.valueProxy,x)
+
+ def __init__(self,screen=None,base=None,y=1,x=0,prompt="Button",proxy=None):
+  self.valueProxy=proxy
+  self.base=base
+  self.screen=screen
+  self.y,self.x=y,x
+  self.prompt=prompt
+  self.selected=0
   self.draw()
 
  def draw(self):
-  self.screen.move(1,0)
+  s="{%s}" % (self.prompt,)
+  self.screen.addstr(self.y,self.x,s)
+  self.screen.refresh()
+
+ def handleKey(self,k):
+  if k==10:
+   self.done=1
+   self.selected=1
+   return 1
+  return None
+
+class Checkbox(GuiObject):
+ """checkbox, whose value can be 1 or 0
+screen: curses screen object
+base:base object
+y,x: coordinates for the top left point of this object on screen
+prompt: the text shown as the label for this control, set to None if the inPage setting is to be used with text from the current line
+"""
+ @property
+ def checked(self):
+  return self.value if not self.valueProxy else getattr(self.value,self.valueProxy)
+ @checked.setter
+ def checked(self,x):
+  return setattr(self,"value",x) if not self.valueProxy else setattr(self.value,self.valueProxy,x)
+
+ def __init__(self,screen=None,base=None,y=1,x=0,prompt="no prompt",checked=0,proxy=None):
+  self.valueProxy=proxy
+  self.screen=screen
+  self.base=base
+  self.y,self.x=y,x
+  self.prompt=prompt
+  self.draw()
+
+ def draw(self):
   if self.checked>0:
    t="[x] "
   else:
    t="[ ] "
-  s=t+self.values[0][:self.maxx]
-  self.screen.addstr(1,0,s)
+  s="%s %s" % (self.prompt if self.prompt else "",t,)
+  self.screen.addstr(self.y,self.x,s)
   self.screen.refresh()
 
- def loop(self):
-  while 1:
-   c=self.screen.getch()
-   if c==-1:
-    time.sleep(0.001)
-    continue
-   log("chkbox:key:",c)
-   if c==32:
-    self.checked=0 if self.checked==1 else 1
-    log("chkbox:draw")
-    self.draw()
-   if c==curses.KEY_BACKSPACE:
-    return self.checked
-   if c==ord("\n"):
-    return self.checked
+ def keyHandler(self,c):
+  log("chkbox:key:",c)
+  if c==32:
+   self.checked=0 if self.checked==1 else 1
+   log("chkbox:draw")
+   self.draw()
+   return 1
+  return 0
 
-class Editbox(object):
+class Readline(GuiObject):
+ """
+prompt for user input, with bindings to that of the default readline implimentation
+history: a list of strings which constitutes the previously entered set of strings given to the caller of this function during previous calls
+text: the default text, entered as if the user had typed it directly
+echo: acts as a mask for passwords (set to ' ' in order to not echo any visible character for passwords)
+length: the maximum length for this text entry (element.attr=maxlength is the corresponding html attribute)
+delimiter: the delimiter between prompt and text
+readonly: whether to accept new text
+"""
+ @property
+ def text(self):
+  return self.value if not self.valueProxy else getattr(self.value,self.valueProxy)
+ @text.setter
+ def text(self,x):
+  return setattr(self,"value",x) if not self.valueProxy else setattr(self.value,self.valueProxy,x)
+
+ def __init__(self,screen=None, base=None, y=1, x=0, history=[], prompt="input",text="",echo=None,length=None,delimiter=":",readonly=0,proxy=None):
+  self.valueProxy=proxy
+  self.done=0
+  self.base=base
+  self.screen=screen
+  self.y,self.x=y,x
+  self.history=history
+  self.historyPos=len(self.history) if self.history else 0
+  self.text=text
+  self.prompt=prompt
+  self.delimiter=delimiter
+  self.echo=echo
+  self.readonly=readonly
+  self.length=length
+#prompt and delimiter
+  self.s="%s%s" % (self.prompt,self.delimiter,) if self.prompt else ""
+#position in the currently-being-editted text
+  self.ptr=0
+#start of text entry "on-screen", should be greater than self.ptr unless there is absolutely no prompt, (in othe words, a completely blank line)
+#if there's a prompt, startX should be right after the prompt and the delimiter
+#if not, startX is going to be wherever self.x is, as that's where our text is going to appear
+  self.startX=len(self.s) if self.s else self.x
+#length between end of prompt, e.g. position of first letter of text, and end of line
+#this is how many spaces we actually have to place text on the line
+  self.fieldLength=self.screen.getmaxyx()[1]-self.startX
+#put ptr at the end of the current bit of text
+  self.currentLine=list(self.text)
+  self.ptr=len(self.currentLine)
+  self.insertMode=True
+  self.lastDraw=None
+  self.draw()
+
+ def draw(self):
+  d=self.ptr,self.currentLine
+  if self.lastDraw and d==self.lastDraw:
+   return
+  self.screen.move(self.y,self.x)
+  self.screen.clrtoeol()
+  if self.s:
+   self.screen.addstr(self.y,self.x,self.s)
+  t=self.currentLine
+  whereInT=0
+#while there's more text to display
+#and the position of the cursor is after the next chunk of text that will be skipped
+#if our display is five characters long
+#our text is abcdefghij
+#our cursor is at position 8, or "i"
+#we should skipp past abcde
+#show fghij
+  tempPtr=self.ptr
+  log("len(t)",len(t),"fieldLength",self.fieldLength,"ptr",self.ptr,"whereInT+fieldLength",whereInT+self.fieldLength)
+  while 1:
+   cont=(len(t)>self.fieldLength and self.ptr>(whereInT+self.fieldLength))
+   if not cont:
+    break
+   t=t[self.fieldLength:]
+   whereInT+=self.fieldLength
+   tempPtr-=self.fieldLength
+  t=t[:self.fieldLength]
+  if self.echo:
+   t=str(self.echo)[:1]*len(t)
+  self.screen.addstr(self.y,self.startX,"".join(t))
+  self.screen.move(self.y,self.startX+tempPtr)
+  self.screen.refresh()
+  log("wrote %d (%s) at %d,%d and moved to %d,%d" % (len(t),t,self.y,self.startX,self.y,tempPtr,))
+  self.lastDraw=self.ptr,self.currentLine
+
+ def handleKey(self,c):
+  if 1:
+   if curses.ascii.isprint(c):
+    if self.readonly:
+     self.beepIfNeeded()
+     self.setStatus("This is a read only line. Text can not be modified.")
+    else:
+     t=chr(c)
+     if not self.insertMode:
+      self.currentLine[self.ptr]=t
+     else:
+      self.currentLine.insert(self.ptr,t)
+      self.ptr+=1
+   elif c == 3:  # ^C
+    self.setStatus("Input aborted!")
+    self.currentLine=[]
+   elif c == 10:  # ^J newline
+    if self.history!=None and self.currentLine:
+     self.history.append(self.currentLine)
+    self.done=1
+   elif c in (1, 262):  # ^A, Home key
+    self.ptr=0
+   elif c in (5, 360):  # ^E, End key
+    self.ptr=len(self.currentLine)
+   elif c in (2, 260):  # ^B, left arrow
+    if self.ptr>0:
+     self.ptr-=1
+    else:
+     self.beepIfNeeded()
+   elif c in (6, 261):  # ^f, right arrow
+    if self.ptr<len(self.currentLine):
+     self.ptr+=1
+    else:
+     self.beepIfNeeded()
+     self.ptr=len(self.currentLine)
+   elif c == 259:  # Up arrow
+    if not self.history or self.historyPos==0: #history will return non-zero if it has content
+     self.beepIfNeeded()
+     msg="No history to move up through." if not self.history else "No previous history to move up through."
+     self.setStatus(msg)
+    elif self.history and self.historyPos>0:
+     if self.historyPos==len(self.history):
+      self.tempLine=self.currentLine
+     self.historyPos-=1
+     self.currentLine=list(self.history[self.historyPos])
+     self.ptr=len(self.currentLine)
+    else:
+     self.setStatus("Something odd occured, readLine, up arrow")
+   elif c == 258:  # Down arrow
+#if there is no history, or we're off the end of the history list (therefore using tempLine), show an error
+    if not self.history or self.historyPos>=len(self.history):
+     self.beepIfNeeded()
+     msg="No history to move down through." if not self.history else "No more history to move down through."
+     self.setStatus(msg)
+#otherwise, we've got more history, or tempLine left to view
+    elif self.history:
+#go ahead and move down
+     self.historyPos+=1
+#if we're now off the end of the history, pull up tempLine
+#maybe user thought they'd typed something and they hadn't, so they can get back to their pre-history command
+     if self.historyPos==len(self.history):
+      self.currentLine=self.tempLine
+#normal history item
+     else:
+      self.currentLine=list(self.history[self.historyPos])
+#move to the end of this line, history or tempLine
+     self.ptr=len(self.currentLine)
+    else:
+     self.setStatus("Something odd occured, readLine, down arrow")
+   elif c == 18:  # ^R Reverse search for Brandon
+    self.beepIfNeeded()
+    self.setStatus("reverse search not yet implimented")
+   elif c in (8, 263):  # ^H, backSpace
+    if self.ptr>0:
+     self.currentLine.pop(self.ptr-1)
+     self.ptr-=1
+    else:
+     self.beepIfNeeded()
+   elif c in (4, 330):  # ^D, delete
+    if self.ptr<len(self.currentLine):
+     self.currentLine.pop(self.ptr)
+    else:
+     self.beepIfNeeded()
+   elif c == 331:  # insert
+    self.insertMode=False if self.insertMode==True else False
+    self.setStatus("insert mode "+"on" if self.insertMode else "off")
+   elif c == 21:  # ^U
+    self.ptr=0
+    self.currentLine=[]
+   elif c == 11:  # ^K
+    self.currentLine=self.currentLine[:self.ptr]
+   else:
+    return None
+#handled keystroke
+  self.draw()
+  return 1
+
+class naEditbox(object):
  """Editing widget using the interior of a window object.
   Supports the following Emacs-like key bindings:
  Ctrl-A   Go to left edge of window.
@@ -57,7 +337,9 @@ class Editbox(object):
  Move operations do nothing if the cursor is at an edge where the movement is not possible.  The following synonyms are supported where possible:
  KEY_LEFT = Ctrl-B, KEY_RIGHT = Ctrl-F, KEY_UP = Ctrl-P, KEY_DOWN = Ctrl-N, KEY_BACKSPACE = Ctrl-h
  """
- def __init__(self, **kw):
+ def __init__(self, screen=None, base=None, y=1, x=0,text="edit field",proxy=None):
+  self.valueProxy=proxy
+  self.base=base
   self.default="Edit Field"
   [setattr(self,k,v) for k,v in kw.items()]
   self.win=self.screen
@@ -91,7 +373,7 @@ class Editbox(object):
   self.text.insert(y, [])
 
  def _end_of_line(self, y):
-  "Go to the location of the first blank on the given line."
+  """Go to the location of the first blank on the given line."""
   last = self.maxx
   while 1:
    if curses.ascii.ascii(self.win.inch(y, last)) != curses.ascii.SP:
@@ -249,133 +531,78 @@ class Editbox(object):
    status = self.callback(o_ch)
   return status
 
-class Listbox(object):
- def __init__(self,**kw):
-  self.title="untitled"
-  [setattr(self,k,v) for k,v in kw.items()]
-  if hasattr(self,"values") and type(self.values[0])==str:
-   self.values=[(self.values.index(i),i) for i in self.values]
+class Listbox(GuiObject):
+ @property
+ def where(self):
+  return self.value if not self.valueProxy else getattr(self.value,self.valueProxy)
+ @where.setter
+ def where(self,x):
+  return setattr(self,"value",x) if not self.valueProxy else setattr(self.value,self.valueProxy,x)
+
+ def __init__(self,screen=None,base=None,y=0,x=0,height=10,title=None,items=[],value=0,keysWaitTime=0.4,proxy=None):
+  self.valueProxy=proxy
+  self.screen=screen
+  self.base=base
+  self.y,self.x=y,x
+  self.title=title
+  if items and type(items[0]) not in (tuple,list):
+   self.items=zip(xrange(len(items)),items)
+  else:
+   self.items=items
   self.keys=[]
-  self.keysWaitTime=0.4
-  self.pos=1
-  self.start=1
-  self.end=self.maxy
-  self.entry=self.maxy+1
-  self.status=self.maxy+2
-  self.displaySize=self.end
-  self.offset=0
-  self.setTitle(self.title)
-#  self.setStatus(self.status)
-  self.makeNewList()
-#  log("list:",self.l)
-  self.setDefault()
+  self.keysWaitTime=keysWaitTime
+#self.where uses self.value
+  self.value=value
+  self.height=height
   self.draw()
 
- def setTitle(self,title="untitled"):
-  pos=self.screen.getyx()
-  self.screen.move(0,0)
-  self.screen.clrtoeol()
-  self.screen.addstr("%s" % (title))
-  self.screen.move(pos[0],pos[1])
-
- def setStatus(self,status=""):
-  pos=self.screen.getyx()
-  self.screen.move(self.status,0)
-  self.screen.clrtoeol()
-  self.screen.addstr(self.status,0,status[:self.maxx])
-  self.screen.move(pos[0],pos[1])
-
- def makeNewList(self):
-  self.l=[]
-  for i in range(0,len(self.values)+self.displaySize,self.displaySize):
-   self.l.append(self.values[i:i+self.displaySize])
-  if len(self.l[-1])==0:
-   self.l=self.l[:-1]
-
- def draw(self,offset=None,move=None):
-  if offset!=None:
-   self.offset=offset
-  if move!=None:
-   self.pos=move
-  items=self.l[self.offset]
-  j=0
-  for i in range(self.start,len(items)+1):
-   self.screen.move(i,0)
+ def draw(self):
+  show=self.items[self.where:self.where+self.height]
+  for idx,itm in zip(xrange(self.y,self.y+self.height),show):
+   self.screen.move(idx,0)
    self.screen.clrtoeol()
-   self.screen.addstr(i,0,items[j][-1])
-   j+=1
-  self.screen.move(self.pos,0)
+   self.screen.addstr(idx,0,str(itm[1]))
+  self.screen.move(self.y,0)
   self.screen.refresh()
-
- def setDefault(self):
-  if not hasattr(self,"default"):
-   return
-  k=-1
-  for i in xrange(len(self.l)+1):
-   for j in xrange(len(self.l[i])+1):
-    k+=1
-    if k==self.default:
-     self.offset=i
-     self.pos=j+1
-     return
 
  def search(self,key):
   t=time.time()
-  if key in string.printable and (len(self.keys)>0 and t-self.keys[-1][0]<self.keysWaitTime):
+  if key in string.printable and (self.keys and t-self.keys[-1][0]<self.keysWaitTime):
    self.keys.append((t,key))
   else:
    self.keys=[(t,key)]
   keys="".join([i[1] for i in self.keys])
   keys=keys.lower()
-  for i in self.l:
-   for j in i:
-    if j[-1].lower().startswith(keys):
-     offset,pos=self.l.index(i),i.index(j)+1
-     return self.draw(offset=offset,move=pos)
+  j=-1
+  for i in self.items:
+   j+=1
+   if str(i[1]).lower().startswith(keys):
+    self.where=j
 
- def loop(self):
-  while 1:
-   c=self.screen.getch()
-   if c!=-1:
-    if c==curses.KEY_UP:
-     self.prevLine()
-    elif c==curses.KEY_DOWN:
-     self.nextLine()
-    elif c==ord('\n'):
-     return self.returnItem()
-    else:
-     if c>=0 and c<128:
-      self.search(chr(c))
+ def handleKey(self,c):
+  if curses.ascii.isprint(c):
+   self.search(chr(c))
+  elif c==curses.KEY_UP:
+   if self.where<=0:
+    self.beepIfNeeded()
+    self.setStatus("Top of list.")
+    self.where=0
    else:
-    time.sleep(0.02)
-
- def returnItem(self):
-  y,x=self.screen.getyx()
-  return self.l[self.offset][y-self.start]
-
- def nextLine(self):
-  np=self.pos+1
-  #log("nextLine","pos",self.pos,"np",np,"len(self.l)",len(self.l),"offset",self.offset)
-  if np>len(self.l[self.offset]):
-   if len(self.l)>self.offset+1:
-    self.pos=self.start
-    self.offset+=1
+    self.where-=1
+  elif c==curses.KEY_DOWN:
+   if self.where>=len(self.items):
+    self.beepIfNeeded()
+    self.setStatus("Bottom of list.")
+    self.where=len(self.items)-1
    else:
-    return -1
+    self.where+=1
+  elif c==10:
+   self.done=1
+   self.selected=self.items.index(self.items[self.where])
   else:
-   self.pos+=1
+   return None
   self.draw()
- def prevLine(self):
-  np=self.pos-1
-  if np<self.start:
-   if self.offset>0:
-    self.pos=min(self.end,len(self.l[np]))
-    self.offset-=1
-   else:
-    return -1
-  else:
-   self.pos-=1
-  self.draw()
+  return 1
 
 class FileBrowser(Listbox):
  def __init__(self,**kw):

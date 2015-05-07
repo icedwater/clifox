@@ -1,0 +1,24 @@
+#!/bin/bash
+if [ -e "`pwd`/ff/firefox/firefox" ]
+then
+echo "Using local copy of firefox at \"`pwd`/ff/firefox/firefox\""
+ff="`pwd`/ff/firefox/firefox"
+ffcode="0"
+else
+ff="$(which firefox)"
+ffcode=$?
+if [ "$ffcode" == "0" ]
+then
+echo "Probably using a system copy of firefox at \"${ff}\""
+fi
+fi
+if [ "$ffcode" == "0" ]
+then
+cd extension
+xvfb-run -w 0 cfx -b "${ff}" run 2>&1 | tee ../ firefox.log &
+pid=$!
+echo "running xvfb and firefox with pid ${pid}"
+else
+echo "The firefox binary could not be located. Please install Firefox from your systems package repositories."
+fi
+

@@ -1,0 +1,51 @@
+Welcome:
+
+This is Clifox, a wrapper around Firefox and it's internals, that allows the browser to be used from the command line.
+This application is not feature complete, though browsing most websites is easy enough.
+
+Prerequisits:
+
+python 2.6 or python 2.7
+xvfb
+python-json
+
+Installation:
+
+Please install your systems version of Mozilla Firefox.
+On Debian and Ubuntu, this is known as iceweasel.
+Other systems will have their own names for Firefox.
+Once this package is installed, please insure that a symlink exists in your path, that points to the new package.
+This symlink should be called firefox.
+To make sure this symlink exists, run:
+which firefox
+If you get a path printed from this command, all is well.
+If you don't get any output,
+please send your linux distribution name and release version to us, as well as the name of the package you installed to fulfill the Firefox role.
+(Read the docs/support file for contact information.)
+Install the extension wrapper (as we're still trying to get the code together to force clifox to run automatically).
+Run:
+make dev
+Create the ~/.clifox directory.
+run:
+mkdir ~/.clifox
+Copy the sample config:
+cp clifox.conf ~/.clifox/
+Ignore this line as of now. It will replace the above steps. Run the file ./install.sh in the root directory of this code.
+
+Run:
+
+To run firefox, in this application directory, type:
+./run
+This will runn Firefox in the background.
+The process ID of firefox will be displayed, so that you can later terminate it, if needed.
+To access the running firefox instance, run:
+./clifox
+This connects Clifox to the running instance of Firefox.
+
+Usage:
+
+Key bindings can be found in ~/.clifox/clifox.conf.
+Logs are in ~/.clifox/clifox.log.
+
+Happy browsing.
+

@@ -2,7 +2,7 @@ import os,os.path,utils,curses
 config=utils.attrDict()
 
 def defaultConfig():
- global config
+ config=utils.attrDict()
 #replace with parser for name.x.y.z=value, resolvable with config.name.x.y.z
 #set dom to parse js
  config.logging=1
@@ -10,6 +10,7 @@ def defaultConfig():
  config.pagePosition="percentage"
  config.caseSensitiveSearch="false"
  config.showInstantPage=0
+ config.dbg=0
  config.mainWindowKeys={
 ord("`"):"self.nextWindow()",
 ord("q"):"self.quit()",
@@ -19,6 +20,7 @@ curses.KEY_UP:"self.prevLine()",
 curses.KEY_RIGHT:"self.nextChar()",
 curses.KEY_LEFT:"self.prevChar()"
 }
+ return config
 
 if os.path.exists('/etc/wb.conf'): execfile('/etc/wb.conf')
 if os.path.exists('./wb.conf'): execfile('./wb.conf')
@@ -28,5 +30,7 @@ if not os.path.exists(os.path.expanduser('~/.clifox/')):
  os.mkdir(os.path.expanduser('~/.clifox'))
 if os.path.exists(os.path.expanduser('~/.clifox/clifox.conf')):
  execfile(os.path.expanduser('~/.clifox/clifox.conf'))
-if not config.keys():
- defaultConfig()
+dc=defaultConfig()
+for k in dc:
+ if k not in config:
+  config[k]=dc[k]
