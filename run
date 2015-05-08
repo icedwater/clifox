@@ -15,7 +15,7 @@ fi
 if [ "$ffcode" == "0" ]
 then
 cd extension
-xvfb-run -w 0 cfx -b "${ff}" run 2>&1 | tee ../ firefox.log &
+xvfb-run -w 0 cfx -b "${ff}" run >../firefox.log 2>&1 &
 pid=$!
 echo "running xvfb and firefox with pid ${pid}"
 else
