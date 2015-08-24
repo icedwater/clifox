@@ -172,13 +172,10 @@ readonly: whether to accept new text
   self.s="%s%s" % (self.prompt,self.delimiter,) if self.prompt else ""
 #position in the currently-being-editted text
   self.ptr=0
-#start of text entry "on-screen", should be greater than self.ptr unless there is absolutely no prompt, (in othe words, a completely blank line)
+#start of text entry "on-screen", should be greater than self.ptr unless there is absolutely no prompt, (in other words, a completely blank line)
 #if there's a prompt, startX should be right after the prompt and the delimiter
 #if not, startX is going to be wherever self.x is, as that's where our text is going to appear
   self.startX=len(self.s) if self.s else self.x
-#length between end of prompt, e.g. position of first letter of text, and end of line
-#this is how many spaces we actually have to place text on the line
-  self.fieldLength=self.screen.getmaxyx()[1]-self.startX
 #put ptr at the end of the current bit of text
   self.currentLine=list(self.text)
   self.ptr=len(self.currentLine)
