@@ -1,4 +1,11 @@
 #!/bin/bash
+echo "FATAL SECURITY WARNING!"
+echo "Please note. Certificate verification has been disabled in this copy of Firefox."
+echo "This means that anyone can hijack your web-browsing traffic while using this browser."
+echo "You will have no garuntee of confidentiality, security, or privacy while using this application."
+echo "We have attempted to insure that code from this browser will not leak into any other browsers on your machine, but we can not absolutely insure this."
+echo "Please press enter to continue using this application, or press control-c to exit."
+read
 if [ -e "`pwd`/ff/firefox/firefox" ]
 then
 echo "Using local copy of firefox at \"`pwd`/ff/firefox/firefox\""
