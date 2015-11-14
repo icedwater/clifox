@@ -40,6 +40,7 @@ Please press enter to continue.
  fh=urllib.urlopen(adobeWsUrl)
  fc=fh.read()
  fh.close()
+ fc=fc.decode('iso-8859-2')
  x=json.loads(fc)
  try:
   good=[i for i in x if i['platform']=="Linux"]
