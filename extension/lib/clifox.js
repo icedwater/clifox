@@ -627,6 +627,7 @@ function clifoxRunner() {
     this.sessions = [];
     this.gui=[];
 try {
+this.initCertOverride();
 this.initGuiHandling();
 } catch(e) {
 error(e.toString());
@@ -634,13 +635,26 @@ error(e.stack);
 }
 }
 clifoxRunner.prototype = {
-initGuiHandling:function() {
-var prompter,c;
+initCertOverride:function() {
+var certOverrider;
+this.initComp();
+certOverrider=new this.certOverrider(this);
+this.comp.register("@mozilla.org/security/certoverride;1",certOverrider,'{67ba681d-5485-4fff-952c-2ee337ffdcd6}','nsICertOverrideService');
+},
+initComp:function() {
+var c;
+if(!this.comp) {
 c=new this.componentHandler(this);
 this.comp=c;
+}
+return c;
+},
+initGuiHandling:function() {
+var prompter;
+this.initComp();
 var prompter=new this.prompter(this);
-c.register("@mozilla.org/prompter;1",prompter);
-c.register("@mozilla.org/embedcomp/prompt-service;1",prompter);
+this.comp.register("@mozilla.org/prompter;1",prompter);
+this.comp.register("@mozilla.org/embedcomp/prompt-service;1",prompter);
 //clifox.comp.unregister();
 },
     listen: function(fullUri, handler, globalContext) {
@@ -773,6 +787,109 @@ return this.obj[this.key];
 });
 };
 clifoxRunner.prototype.valueProxy.prototype={
+};
+clifoxRunner.prototype.certOverrider=function(base) {
+this.base=base;
+};
+clifoxRunner.prototype.certOverrider.prototype={
+QueryInterface:XPCOMUtils.generateQI([Ci.nsISupports,Ci.nsICertOverrideService]),
+ERROR_UNTRUSTED: 1,
+ERROR_MISMATCH: 2,
+ERROR_TIME: 4,
+defaultBits:1,
+/////
+// Returns the bit needed to mask if the certificate has expired, 0 otherwise.
+certificateExpiredBit_:function(theCert, verification_result) {
+if ((verification_result & theCert.CERT_EXPIRED) != 0) {
+return this.ERROR_TIME;
+}
+return 0;
+},
+// Returns the bit needed to mask untrusted issuers, 0 otherwise.
+// Note that this bit is already set by default in defaultBits
+certificateIssuerUntrusted_:function(theCert, verification_result) {
+if (((verification_result & theCert.ISSUER_UNKNOWN) != 0) ||
+((verification_result & theCert.ISSUER_NOT_TRUSTED) != 0) ||
+((verification_result & theCert.CERT_NOT_TRUSTED) != 0) ||
+((verification_result & theCert.INVALID_CA) != 0)) {
+return this.ERROR_UNTRUSTED;
+}
+return 0;
+},
+// Returns the bit needed to mask mismatch between actual hostname
+// and the hostname the certificate was issued for, 0 otherwise.
+certificateHostnameMismatch_:function(theCert, aHost) {
+var commonNameRE;
+commonNameRE = new RegExp('^' + theCert.commonName.replace('*', '[\\w|\-]+') + '$', 'i');
+if (aHost.match(commonNameRE) === null) {
+return this.ERROR_MISMATCH;
+}
+return 0;
+},
+// Given a certificate and the host it was received for, fill in the bits
+// needed to accept this certificate for this host, even though the
+// certificate is invalid.
+//
+// Note that the bitmask has to be accurate: At the moment, Firefox expects
+// the returned bitmask to match *exactly* to the errors the certificate
+// caused. If extra bits will be set, the untrusted certificate screen
+// will appear.
+fillNeededBits:function(aCert, aHost) {
+var verificationBits,returnBits;
+verificationBits=0;
+//aCert.verifyForUsage(aCert.CERT_USAGE_SSLClient);
+returnBits=this.defaultBits;
+returnBits|=this.certificateExpiredBit_(aCert, verificationBits);
+returnBits|=this.certificateHostnameMismatch_(aCert, aHost);
+// Return bits will be 0 here only if:
+// 1. Both checks above returned 0.
+// 2. shouldAssumeUntrustedIssuer is false (otherwise this.defaultBits = 1)
+// It has been observed that if there's a host name mismatch then it
+// may not be required to check the trust status of the certificate issuer.
+if (returnBits == 0) {
+returnBits |= this.certificateIssuerUntrusted_(aCert, verificationBits);
+}
+return returnBits;
+},
+// Interface functions from now on.
+hasMatchingOverride:function( aHostName, aPort, aCert, aOverrideBits, aIsTemporary) {
+var retval;
+retval=false;
+// var acceptAll = shouldAcceptUntrustedCerts();
+// if (acceptAll === true) {
+// goog.log.info(WdCertOverrideService.LOG_, 'Allowing certificate from site: ' + aHostName + ':' + aPort);
+retval = true;
+aIsTemporary.value = true;
+//if (bot.userAgent.isProductVersion(19)) {
+// goog.log.info(WdCertOverrideService.LOG_, 'Setting all Override Bits');
+//aOverrideBits.value = this.ERROR_UNTRUSTED | this.ERROR_MISMATCH | this.ERROR_TIME;
+//} else {
+aOverrideBits.value = this.fillNeededBits(aCert, aHostName);
+//}
+// goog.log.info(WdCertOverrideService.LOG_, 'Override Bits: ' + aOverrideBits.value);
+// } else {
+// retval = this.orig.hasMatchingOverride(aHostName, aPort, aCert, aOverrideBits, aIsTemporary);
+// }
+return retval;
+},
+// Delegate the rest of the functions - they are not interesting as they are not
+// called during validation of invalid certificate normally.
+clearValidityOverride:function(aHostName, aPort) {
+this.orig.clearValidityOverride(aHostName, aPort);
+},
+getAllOverrideHostsWithPorts:function( aCount, aHostsWithPortsArray) {
+return this.orig.getAllOverrideHostsWithPorts(aCount, aHostsWithPortsArray);
+},
+getValidityOverride:function( aHostName, aPort, aHashAlg, aFingerprint, aOverrideBits, aIsTemporary) {
+return this.orig.getValidityOverride( aHostName, aPort, aHashAlg, aFingerprint, aOverrideBits, aIsTemporary);
+},
+isCertUsedForOverrides:function( aCert, aCheckTemporaries, aCheckPermanents) {
+return this.orig.isCertUsedForOverrides( aCert, aCheckTemporaries, aCheckPermanents);
+},
+rememberValidityOverride:function( aHostName, aPort, aCert, aOverrideBits, aTemporary) {
+this.orig.rememberValidityOverride( aHostName, aPort, aCert, aOverrideBits, aTemporary);
+},
+/////
 };
 clifoxRunner.prototype.prompter=function(base)
 {
@@ -936,8 +1053,13 @@ this.componentRegistrar = components.manager
 .QueryInterface(Ci.nsIComponentRegistrar);
 }
 clifoxRunner.prototype.componentHandler.prototype={
-register:function(contractId,component) {
-var cid,factory;
+register:function(contractId,component,existingCid,existingInterfaceName) {
+var cid,factory,origService,origComponent;
+if(existingCid&&existingInterfaceName) {
+origService=components.classesByID[existingCid].getService();
+origComponent=origService.QueryInterface(Ci[existingInterfaceName]);
+component.orig=origComponent;
+}
 //insure contract we are calling exists
 cid = this.componentRegistrar
 .contractIDToCID(contractId);
