@@ -195,46 +195,24 @@ readonly: whether to accept new text
   if self.s:
    self.screen.addstr(self.y,self.x,self.s)
   t=self.currentLine
-  whereInT=0
-#while there's more text to display
-#and the position of the cursor is after the next chunk of text that will be skipped
-#if our display is five characters long
-#our text is abcdefghij
-#our cursor is at position 8, or "i"
-#we should skipp past abcde
-#show fghij
-  tempPtr=self.ptr
-  log("len(t)",len(t),"fieldLength",self.fieldLength,"ptr",self.ptr,"whereInT+fieldLength",whereInT+self.fieldLength)
-  while 1:
-   cont=(len(t)>self.fieldLength and self.ptr>(whereInT+self.fieldLength))
-   if not cont:
-    break
-   t=t[self.fieldLength:]
-   whereInT+=self.fieldLength
-   tempPtr-=self.fieldLength
-  t=t[:self.fieldLength]
+  cnt=0
   if self.echo:
    t=str(self.echo)[:1]*len(t)
-  self.screen.addstr(self.y,self.startX,"".join(t))
+#Unicode characters are multiple bytes so we need to adjust where to place the cursor to track the output.
+   self.screen.addstr(self.y,self.startX,"".join(t))
+  for i in xrange(len(t)):
+   if ord(t[i]) in (194, 195):
+    cnt+=1
+  tempPtr=len(t)-cnt
   self.screen.move(self.y,self.startX+tempPtr)
   self.screen.refresh()
-  log("wrote %d (%s) at %d,%d and moved to %d,%d" % (len(t),t,self.y,self.startX,self.y,tempPtr,))
+  log("Readline:draw","wrote %d (%s) at %d,%d and moved to %d,%d" % (len(t),t,self.y,self.startX,self.y,tempPtr,))
   self.lastDraw=self.ptr,self.currentLine
 
  def handleKey(self,c):
-  if 1:
-   if curses.ascii.isprint(c):
-    if self.readonly:
-     self.beepIfNeeded()
-     self.setStatus("This is a read only line. Text can not be modified.")
-    else:
-     t=chr(c)
-     if not self.insertMode:
-      self.currentLine[self.ptr]=t
-     else:
-      self.currentLine.insert(self.ptr,t)
-      self.ptr+=1
-   elif c == 3:  # ^C
+   if c==-1:
+    return None
+   if c == 3:  # ^C
     self.setStatus("Input aborted!")
     self.currentLine=[]
    elif c == 10:  # ^J newline
@@ -313,10 +291,20 @@ readonly: whether to accept new text
    elif c == 11:  # ^K
     self.currentLine=self.currentLine[:self.ptr]
    else:
-    return None
-#handled keystroke
-  self.draw()
-  return 1
+    if self.readonly:
+     self.beepIfNeeded()
+     self.setStatus("This is a read only line. Text can not be modified.")
+    else:
+     t=chr(c)
+     if not self.insertMode:
+      self.currentLine[self.ptr]=t
+     else:
+      self.currentLine.insert(self.ptr,t)
+      self.ptr+=1
+    log("Readline:handle","t=",t,"c=",c,"ptr=",self.ptr)
+      #handled keystroke
+   self.draw()
+   return 1
 
 class naEditbox(object):
  """Editing widget using the interior of a window object.
