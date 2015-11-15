@@ -201,7 +201,8 @@ readonly: whether to accept new text
    if ord(t[i]) in (194, 195):
     cnt+=1
   tempPtr=len(t)-cnt
-  self.screen.move(self.y,self.startX+tempPtr)
+  self.screen.addstr(self.y,self.startX,"".join(t))
+  self.screen.move(self.y,self.startX+self.ptr)
   self.screen.refresh()
   log("Readline:draw","wrote %d (%s) at %d,%d and moved to %d,%d" % (len(t),t,self.y,self.startX,self.y,tempPtr,))
   self.lastDraw=self.ptr,self.currentLine
