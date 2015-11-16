@@ -154,7 +154,7 @@ readonly: whether to accept new text
  def text(self,x):
   return setattr(self,"value",x) if not self.valueProxy else setattr(self.value,self.valueProxy,x)
 
- def __init__(self,screen=None, base=None, y=1, x=0, history=[], prompt="input",text="",echo=None,length=None,delimiter=":",readonly=0,proxy=None):
+ def __init__(self,screen=None, base=None, y=1, x=0, history=[], prompt=u"input", text=u"", echo=None, length=None, delimiter=u": ", readonly=0, proxy=None):
   self.valueProxy=proxy
   self.done=0
   self.base=base
@@ -169,7 +169,7 @@ readonly: whether to accept new text
   self.readonly=readonly
   self.length=length
 #prompt and delimiter
-  self.s="%s%s" % (self.prompt,self.delimiter,) if self.prompt else ""
+  self.s=u"%s%s" % (self.prompt,self.delimiter,) if self.prompt else ""
 #position in the currently-being-editted text
   self.ptr=0
 #start of text entry "on-screen", should be greater than self.ptr unless there is absolutely no prompt, (in other words, a completely blank line)
@@ -177,7 +177,7 @@ readonly: whether to accept new text
 #if not, startX is going to be wherever self.x is, as that's where our text is going to appear
   self.startX=len(self.s) if self.s else self.x
 #put ptr at the end of the current bit of text
-  self.currentLine=list(self.text)
+  self.currentLine=self.text
   self.ptr=len(self.currentLine)
   self.insertMode=True
   self.lastDraw=None
@@ -195,16 +195,11 @@ readonly: whether to accept new text
   cnt=0
   if self.echo:
    t=str(self.echo)[:1]*len(t)
-#Unicode characters are multiple bytes so we need to adjust where to place the cursor to track the output.
    self.screen.addstr(self.y,self.startX,"".join(t))
-  for i in xrange(len(t)):
-   if ord(t[i]) in (194, 195):
-    cnt+=1
-  tempPtr=len(t)-cnt
   self.screen.addstr(self.y,self.startX,"".join(t))
   self.screen.move(self.y,self.startX+self.ptr)
   self.screen.refresh()
-  log("Readline:draw","wrote %d (%s) at %d,%d and moved to %d,%d" % (len(t),t,self.y,self.startX,self.y,tempPtr,))
+  log("Readline:draw: wrote %d (%s) at %d,%d and moved to %d,%d" % (len(t),t,self.y,self.startX,self.y,self.startX+self.ptr))
   self.lastDraw=self.ptr,self.currentLine
 
  def handleKey(self,c):
@@ -212,7 +207,7 @@ readonly: whether to accept new text
     return None
    if c == 3:  # ^C
     self.setStatus("Input aborted!")
-    self.currentLine=[]
+    self.currentLine=u''
    elif c == 10:  # ^J newline
     if self.history!=None and self.currentLine:
      self.history.append(self.currentLine)
@@ -261,7 +256,7 @@ readonly: whether to accept new text
       self.currentLine=self.tempLine
 #normal history item
      else:
-      self.currentLine=list(self.history[self.historyPos])
+      self.currentLine=self.history[self.historyPos]
 #move to the end of this line, history or tempLine
      self.ptr=len(self.currentLine)
     else:
@@ -271,13 +266,13 @@ readonly: whether to accept new text
     self.setStatus("reverse search not yet implimented")
    elif c in (8, 263):  # ^H, backSpace
     if self.ptr>0:
-     self.currentLine.pop(self.ptr-1)
+     self.currentLine=u"%s%s" % (self.currentLine[:self.ptr-1],self.currentLine[self.ptr:])
      self.ptr-=1
     else:
      self.beepIfNeeded()
    elif c in (4, 330):  # ^D, delete
     if self.ptr<len(self.currentLine):
-     self.currentLine.pop(self.ptr)
+     self.currentLine=u"%s%s" % (self.currentLine[:self.ptr],self.currentLine[self.ptr+1:])
     else:
      self.beepIfNeeded()
    elif c == 331:  # insert
@@ -285,7 +280,7 @@ readonly: whether to accept new text
     self.setStatus("insert mode "+"on" if self.insertMode else "off")
    elif c == 21:  # ^U
     self.ptr=0
-    self.currentLine=[]
+    self.currentLine=u''
    elif c == 11:  # ^K
     self.currentLine=self.currentLine[:self.ptr]
    else:
@@ -297,9 +292,9 @@ readonly: whether to accept new text
      if not self.insertMode:
       self.currentLine[self.ptr]=t
      else:
-      self.currentLine.insert(self.ptr,t)
+      self.currentLine=u"%s%s%s" % (self.currentLine[:self.ptr],t,self.currentLine[self.ptr:])
       self.ptr+=1
-    log("Readline:handle","t=",t,"c=",c,"ptr=",self.ptr)
+    log("Readline:handle: currentLine=%s, t=%s t-type=%s c=%d, ptr=%d" % (self.currentLine,t,type(t),c,self.ptr))
       #handled keystroke
    self.draw()
    return 1
