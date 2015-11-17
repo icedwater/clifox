@@ -183,6 +183,22 @@ readonly: whether to accept new text
   self.lastDraw=None
   self.draw()
 
+ def getunicode(self, c):
+  tc = u' '
+  accumulator = ''
+  done = False
+
+  while not done:
+   nextbyte = chr(c)
+   accumulator += nextbyte
+   try:
+    tc = accumulator.decode()
+    done = True
+   except:
+    pass
+
+  return tc
+
  def draw(self):
   d=self.ptr,self.currentLine
   if self.lastDraw and d==self.lastDraw:
@@ -288,13 +304,18 @@ readonly: whether to accept new text
      self.beepIfNeeded()
      self.setStatus("This is a read only line. Text can not be modified.")
     else:
-     t=chr(c)
+     uchar=c #self.getunicode(c)
+#     t = ''.join(t)
+#     try:
+#      uchar = unicode(t)
+#     except:
+#      pass
      if not self.insertMode:
       self.currentLine[self.ptr]=t
      else:
-      self.currentLine=u"%s%s%s" % (self.currentLine[:self.ptr],t,self.currentLine[self.ptr:])
+      self.currentLine=u"%s%s%s" % (self.currentLine[:self.ptr],uchar,self.currentLine[self.ptr:])
       self.ptr+=1
-    log("Readline:handle: currentLine=%s, t=%s t-type=%s c=%d, ptr=%d" % (self.currentLine,t,type(t),c,self.ptr))
+    log("Readline:handle: currentLine=%s, uchar=%s c=%s, ptr=%d" % (self.currentLine,uchar,c,self.ptr))
       #handled keystroke
    self.draw()
    return 1
