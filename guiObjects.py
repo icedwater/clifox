@@ -184,20 +184,25 @@ readonly: whether to accept new text
   self.draw()
 
  def getunicode(self, c):
-  tc = u' '
-  accumulator = ''
-  done = False
+   tc = u' '
+   buf = ''
+   done = False
 
-  while not done:
-   nextbyte = chr(c)
-   accumulator += nextbyte
+   nc = chr(c)
+#   log("getunicode: in while nc=%d" % (ord(nc),))
+   buf+=nc
+   if ord(nc) in (194, 195):
+    nc = chr(self.screen.getch())
+#    log("getunicode: inside if test, nc%d" % (ord(nc),))
+    buf+=nc
+#   log("getunicode: in while have buf=%s" % (buf,))
    try:
-    tc = accumulator.decode()
+    tc = buf.decode()
     done = True
    except:
     pass
-
-  return tc
+#   log("getunicode: tc=%s, buf=%s, nc=%d buflen=%d buf[0]=%d" % (tc, buf, ord(nc), len(buf), ord(buf[0])))
+   return tc
 
  def draw(self):
   d=self.ptr,self.currentLine
@@ -215,7 +220,7 @@ readonly: whether to accept new text
   self.screen.addstr(self.y,self.startX,"".join(t))
   self.screen.move(self.y,self.startX+self.ptr)
   self.screen.refresh()
-  log("Readline:draw: wrote %d (%s) at %d,%d and moved to %d,%d" % (len(t),t,self.y,self.startX,self.y,self.startX+self.ptr))
+#  log("Readline:draw: wrote %d (%s) at %d,%d and moved to %d,%d" % (len(t),t,self.y,self.startX,self.y,self.startX+self.ptr))
   self.lastDraw=self.ptr,self.currentLine
 
  def handleKey(self,c):
@@ -304,18 +309,13 @@ readonly: whether to accept new text
      self.beepIfNeeded()
      self.setStatus("This is a read only line. Text can not be modified.")
     else:
-     uchar=c #self.getunicode(c)
-#     t = ''.join(t)
-#     try:
-#      uchar = unicode(t)
-#     except:
-#      pass
+     uchar=self.getunicode(c)
      if not self.insertMode:
       self.currentLine[self.ptr]=t
      else:
       self.currentLine=u"%s%s%s" % (self.currentLine[:self.ptr],uchar,self.currentLine[self.ptr:])
       self.ptr+=1
-    log("Readline:handle: currentLine=%s, uchar=%s c=%s, ptr=%d" % (self.currentLine,uchar,c,self.ptr))
+#    log("Readline:handle: currentLine=%s, uchar=%s c=%s, ptr=%d" % (self.currentLine,uchar,c,self.ptr))
       #handled keystroke
    self.draw()
    return 1

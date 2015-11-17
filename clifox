@@ -400,41 +400,6 @@ used, e.g. when reading a webpage as a whole document.
    c=self.screen.getch()
    handled=cls.handleKey(c)
 
- def get_char(self):
-  def get_check_next_byte():
-   c = self.screen.getch()
-   if 128 <= c <= 191:
-    return c
-   else:
-    raise UnicodeError
-
-  bytes = []
-  c = self.screen.getch()
-  if c==-1:
-   return
-  if c <= 127:
-   # 1 bytes
-   bytes.append(c)
-  elif 194 <= c <= 223:
-   # 2 bytes
-   bytes.append(c)
-   bytes.append(get_check_next_byte())
-  elif 224 <= c <= 239:
-   # 3 bytes
-   bytes.append(c)
-   bytes.append(get_check_next_byte())
-   bytes.append(get_check_next_byte())
-  elif 240 <= c <= 244:
-   # 4 bytes
-   bytes.append(c)
-   bytes.append(get_check_next_byte())
-   bytes.append(get_check_next_byte())
-   bytes.append(get_check_next_byte())
-  log("bytes=%s" % (bytes,))
-  buf = ''.join([chr(b) for b in bytes])
-  buf = buf.decode('utf-8')
-  return buf
-
  def prompt(self,prompt="",y=None, x=None, history=None,text="",echo=None):
   if y==None:
    y=self.entry
@@ -443,7 +408,7 @@ used, e.g. when reading a webpage as a whole document.
   pos=self.screen.getyx()
   cls=guiObjects.Readline(screen=self.screen,prompt=prompt,base=self,y=y,x=0,history=history,text=text,echo=echo)
   while not cls.done:
-   c=self.get_char()
+   c=self.screen.getch()
    handled=cls.handleKey(c)
   self.screen.move(pos[0],pos[1])
   return "".join(cls.currentLine)
