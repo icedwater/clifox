@@ -3,13 +3,13 @@ Welcome:
 This is Clifox, a wrapper around Firefox and it's internals, that allows the browser to be used from the command line.
 This application is not feature complete, though browsing most websites is easy enough.
 
-Please read this crutial security information first.
+Please read this crucial security information first.
 Please note. Certificate verification has been disabled in this copy of Firefox.
 This means that anyone can hijack your web-browsing traffic while using this browser.
-You will have no garuntee of confidentiality, security, or privacy while using this application.
+You will have no guarantee of confidentiality, security, or privacy while using this application.
 We have attempted to insure that code from this browser will not leak into any other browsers on your machine, but we can not absolutely insure this.
 
-Prerequisits:
+Prerequisites:
 
 python 2.6 or python 2.7
 xvfb
@@ -42,7 +42,7 @@ Run:
 
 To run firefox, in this application directory, type:
 ./run
-This will runn Firefox in the background.
+This will run Firefox in the background.
 The process ID of firefox will be displayed, so that you can later terminate it, if needed.
 To access the running firefox instance, run:
 ./clifox

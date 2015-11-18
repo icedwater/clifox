@@ -32,8 +32,12 @@ For instance, links have their href attribute collected, and all img elements ha
 This visible-nodes-and-attributes structure is returned to Python.
 Python moves through this structure, placing each element on it's own y,x coordinate set.
 As an example, if we find a link, we'll typically place it on the next available point that is at the beginning of a line,.
-If we're in a list, and find a link, however, we don't put it on it's own line, because it's as much a part of the list as it is it's own element.
-If we encounter a link, and we've already placed text on our current line, we put the link on the next line down, so that it can be differentiated from the text before it before it.
+If we're in a list, and find a link, however, we don't put it on it's
+own line, because it's as much a part of the list as it is it's own
+element.
+If we encounter a link, and we've already placed text on our current
+line, we put the link on the next line down, so that it can be
+differentiated from the text before it.
 When Clifox is done parsing this structure into memory,
 it paints one screen length worth of data to the screen at a time, and allows the user to interact with the webpage.
 As a user moves through the webpage, using arrow keys or other hotkeys, the current element is tracked.
@@ -66,12 +70,12 @@ Comments should be explanatory,
 but notes should be added to this file whenever something is encountered that can not be made clear by context or in-code notes in _that file.
 /clifox:
 The main Python file used for launching clifox.
-This file holds the main interaction class, and is where all Javascript events are sent to.
+This file holds the main interaction class, and is where all Javascript events are sent.
 /mozCom.py:
 The code for the Python-side language bridge.
 This file holds all code pertaining to Javascript object proxying, as well as socket handling for said proxying and language bridging.
 /guiObjects.py:
-Input interfaces for any requested GUI tyeps.
+Input interfaces for any requested GUI types.
 This file holds code to create and display numerous GUI interfaces,
 including single input lines, multi-line edit boxes, checkboxes, listboxes and treeviews, and more.
 /utils.py:
