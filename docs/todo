@@ -42,3 +42,20 @@ var thread = Components.classes["@mozilla.org/thread-manager;1"]
  while (!complete)
    thread.processNextEvent(true);
 
+
+bugs needing removal:
+
+Radio buttons not working.
+
+Select listboxes not working.
+
+Number sign tags not being honoured on page fetching.
+
+Text wrapping not working on some pages.
+
+Header tags not being left adjusted on new lines.
+
+Footnote numbering not being show on the individual footnotes.
+
+The above four items can all be easily seen on the python 2 reference
+library module pages.
