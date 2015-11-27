@@ -503,13 +503,13 @@ used, e.g. when reading a webpage as a whole document.
 
  def handleFormInput(self,element):
   sn,y,x=self.screenNum,self.screenPos,self.screenPosX
-  log("handleFormInput",element)
+  log("handleFormInput",element.name)
   e=element
   baseForm=e.form
 #parentNodes(name="form",count=1)
-#  self.setStatus("hfi:got base form")
   while e!=None and e.nodeName not in self.formElements:
    e=e.parentNode
+#  log("e=%s" % (dir(e),))
   if e.nodeName=="OPTION":
 #   self.setStatus("HFI:option found")
    e=self.parentNodes(e,name="select",count=1)
@@ -518,11 +518,11 @@ used, e.g. when reading a webpage as a whole document.
    opts=e.options
 #getElementsByTagName("option")
    opts=[(i,i.textContent.strip()) for i in opts]
+#   log("e.options: length %d, selectedIndex %s, e.value=%s" % (e.options.length,e.options.selectedIndex,e.value))
    self.setStatus("gListbox,running")
-   ret=self.gListbox(title=e.name,values=opts,default=0)
-   e.value=ret[0].value
-   log("ret:",ret)
-   log("form:",e.value)
+   ret=self.gListbox(screen=self.screen, title=e.name, items=opts, height=e.options.length, value=e.value, where=e.options.selectedIndex)
+   e.value=ret
+   log("listbox returned %s" % (ret,))
   elif e.nodeName=="INPUT" and e.type=="text":
    ret=self.prompt(text=e.value)
    e.value=ret

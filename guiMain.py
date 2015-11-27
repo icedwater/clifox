@@ -51,9 +51,9 @@ class forms(object):
 
  def gListbox(self,**kw):
   log("gListbox:called:",str(kw))
-  kw['screen']=self.screen
-  kw['maxy']=self.maxy
-  kw['maxx']=self.maxx
+#  kw['screen']=self.screen
+#  kw['maxy']=self.maxy
+#  kw['maxx']=self.maxx
   ret=None
   try:
    self.save()
@@ -62,7 +62,9 @@ class forms(object):
    log("gListbox:error saving")
   try:
    l=Listbox(**kw)
-   ret=l.loop()
+   while not l.done:
+    c=self.screen.getch()
+    ret=l.handleKey(c)
   except Exception, e:
    generate_error_report()
   try:

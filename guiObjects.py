@@ -541,11 +541,10 @@ class Listbox(GuiObject):
  def where(self,x):
   return setattr(self,"value",x) if not self.valueProxy else setattr(self.value,self.valueProxy,x)
 
- def __init__(self,screen=None,base=None,y=0,x=0,height=10,title=None,items=[],value=0,keysWaitTime=0.4,proxy=None):
-  self.valueProxy=proxy
+ def __init__(self,screen=None, base=None, y=0, x=0, height=10, title=None, items=[], value='', keysWaitTime=0.4, where=0):
   self.screen=screen
   self.base=base
-  self.y,self.x=y,x
+  self.y,self.x=0,0
   self.title=title
   if items and type(items[0]) not in (tuple,list):
    self.items=zip(xrange(len(items)),items)
@@ -553,18 +552,27 @@ class Listbox(GuiObject):
    self.items=items
   self.keys=[]
   self.keysWaitTime=keysWaitTime
-#self.where uses self.value
   self.value=value
   self.height=height
+  self.where=where
   self.draw()
 
  def draw(self):
-  show=self.items[self.where:self.where+self.height]
-  for idx,itm in zip(xrange(self.y,self.y+self.height),show):
+  show=self.items[0:self.height]
+  self.screen.move(self.y,0)
+  self.screen.clrtoeol()
+  self.screen.addstr(self.y,0,self.title)
+  sep='-'*len(self.title)
+  self.y += 1
+  self.screen.move(self.y,0)
+  self.screen.clrtoeol()
+  self.screen.addstr(self.y,0,sep)
+  sw=2
+  for idx,itm in zip(xrange(sw,sw+self.height),show):
    self.screen.move(idx,0)
    self.screen.clrtoeol()
    self.screen.addstr(idx,0,str(itm[1]))
-  self.screen.move(self.y,0)
+  self.screen.move(sw+self.where,0)
   self.screen.refresh()
 
  def search(self,key):
@@ -582,29 +590,27 @@ class Listbox(GuiObject):
     self.where=j
 
  def handleKey(self,c):
+  if c==-1:
+   return None
   if curses.ascii.isprint(c):
    self.search(chr(c))
   elif c==curses.KEY_UP:
-   if self.where<=0:
-    self.beepIfNeeded()
-    self.setStatus("Top of list.")
-    self.where=0
+   if self.where==0:
+    self.where=len(self.items)-1
    else:
     self.where-=1
   elif c==curses.KEY_DOWN:
-   if self.where>=len(self.items):
-    self.beepIfNeeded()
-    self.setStatus("Bottom of list.")
-    self.where=len(self.items)-1
+   if self.where==len(self.items)-1:
+    self.where=0
    else:
     self.where+=1
-  elif c==10:
+  elif c in (10, 261): # newline or right arrow
    self.done=1
-   self.selected=self.items.index(self.items[self.where])
-  else:
-   return None
+   return self.items[self.where][1]
+  elif c==260: # left arrow quietly back out
+   self.done=1
+   return self.value
   self.draw()
-  return 1
 
 class FileBrowser(Listbox):
  def __init__(self,**kw):
