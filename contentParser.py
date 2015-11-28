@@ -314,7 +314,7 @@ For instance, this would be used for a br element, where a line break is mandato
   else:
    v=n.options[0].textContent
   c=v if v else ''
-  if nm: c="["+nm+"] "+c
+  c="["+c+"] "
   return c
 
  def endSelect(self,idx):
@@ -489,7 +489,7 @@ For instance, this would be used for a br element, where a line break is mandato
   if self.getBlankLines(idx)<2:
    self.fnl(idx)
    self.fnl(idx)
-  return ''
+  return '    '
 
  def tr(self,idx):
   self.nl(idx)

@@ -124,7 +124,7 @@ prompt: the text shown as the label for this control, set to None if the inPage 
    t="[x] "
   else:
    t="[ ] "
-  s="%s %s" % (self.prompt if self.prompt else "",t,)
+  s="%s %s" % (t,self.prompt if self.prompt else "")
   self.screen.addstr(self.y,self.x,s)
   self.screen.refresh()
 
