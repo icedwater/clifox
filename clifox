@@ -430,7 +430,7 @@ used, e.g. when reading a webpage as a whole document.
    return self.setStatus("image %s" % d.src)
   elif d.nodeName=="TEXTAREA":
    return self.setStatus("textArea input, name %s" % d.name)
-  elif d.type=="SELECT":
+  elif d.nodeName=="SELECT":
    return self.setStatus("select list field")
   elif d.nodeName=="INPUT":
    if d.type=="checkbox":
@@ -511,7 +511,7 @@ used, e.g. when reading a webpage as a whole document.
    e=e.parentNode
   log("e=%s" % (dir(e),))
   log("form: %s, formAction: %s, formEnctype: %s, formMethod: %s, FormNoValidate: %s" % (e.form,e.formAction,e.formEnctype,e.formMethod,e.formNoValidate))
-  log("name:",e.name," type:",e.type," nodeName:",e.nodeName," nodeType:",e.nodeType," text:",e.text," textContent:",e.textContent," checked:",e.checked," default checked:",e.defaultChecked," OPTIONS:",e.OPTIONS," options:",e.options," select:",e.select," value:",e.value," defaultValue:",e.defaultValue)
+  log("name:",e.name," title:",e.title," type:",e.type," nodeName:",e.nodeName," nodeType:",e.nodeType," nodeValue:",e.nodeValue," text:",e.text," textContent:",e.textContent," checked:",e.checked," default checked:",e.defaultChecked," hidden:",e.hidden," OPTIONS:",e.OPTIONS," options:",e.options," tagName:",e.tagName," select:",e.select," selectedOptions:",e.selectedOptions," value:",e.value," defaultValue:",e.defaultValue)
   if e.nodeName=="OPTION":
 #   self.setStatus("HFI:option found")
    e=self.parentNodes(e,name="select",count=1)
@@ -525,11 +525,11 @@ used, e.g. when reading a webpage as a whole document.
    ret=self.gListbox(screen=self.screen, title=e.name, items=opts, height=e.options.length, value=e.value, where=e.options.selectedIndex)
    e.value=ret
    log("listbox returned %s" % (ret,))
-  elif e.nodeName=="INPUT" and e.type=="text":
-   ret=self.prompt(text=e.value)
-   e.value=ret
   elif e.nodeName=="INPUT" and e.type=="password":
    ret=self.prompt(text=e.value,echo="*")
+   e.value=ret
+  elif e.nodeName=="INPUT" and e.type=="text":
+   ret=self.prompt(text=e.value)
    e.value=ret
   elif e.nodeName=="TEXTAREA":
    ret=self.prompt(text=e.textContent)
