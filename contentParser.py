@@ -291,8 +291,7 @@ For instance, this would be used for a br element, where a line break is mandato
   nm=self.getInputName(idx)
   v=n.innerHTML
   c=v if v else ''
-  if nm: c="["+nm+"] "+c
-  return c
+  return "["+c+"] "
 
 #text nodes
  def text(self,idx):
@@ -321,6 +320,14 @@ For instance, this would be used for a br element, where a line break is mandato
   self.fnl(idx)
   return ''
 
+ def legend(self,idx):
+  self.fnl(idx)
+  return ''
+
+ def endLegend(self,idx):
+  self.fnl(idx)
+  return ''
+
  def form(self,idx):
   self.fnl(idx)
   return ''
@@ -342,7 +349,7 @@ For instance, this would be used for a br element, where a line break is mandato
   if self.lst[idx].disabled:
    nm="disabled "+nm
   c=value
-  if nm: c="["+nm+"] "+c
+  c="["+c+"] "
   return c
 
  def endInput(self,idx):
@@ -381,7 +388,7 @@ For instance, this would be used for a br element, where a line break is mandato
 
  def inputCheckbox(self,idx):
   c="x" if self.lst[idx].checked else " "
-  return "["+c+"]"
+  return c
 
  def inputRadio(self,idx):
   c="+" if self.lst[idx].checked else "-"
@@ -489,7 +496,7 @@ For instance, this would be used for a br element, where a line break is mandato
   if self.getBlankLines(idx)<2:
    self.fnl(idx)
    self.fnl(idx)
-  return '    '
+  return ''
 
  def tr(self,idx):
   self.nl(idx)

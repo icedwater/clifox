@@ -509,7 +509,9 @@ used, e.g. when reading a webpage as a whole document.
 #parentNodes(name="form",count=1)
   while e!=None and e.nodeName not in self.formElements:
    e=e.parentNode
-#  log("e=%s" % (dir(e),))
+  log("e=%s" % (dir(e),))
+  log("form: %s, formAction: %s, formEnctype: %s, formMethod: %s, FormNoValidate: %s" % (e.form,e.formAction,e.formEnctype,e.formMethod,e.formNoValidate))
+  log("name:",e.name," type:",e.type," nodeName:",e.nodeName," nodeType:",e.nodeType," text:",e.text," textContent:",e.textContent," checked:",e.checked," default checked:",e.defaultChecked," OPTIONS:",e.OPTIONS," options:",e.options," select:",e.select," value:",e.value," defaultValue:",e.defaultValue)
   if e.nodeName=="OPTION":
 #   self.setStatus("HFI:option found")
    e=self.parentNodes(e,name="select",count=1)
