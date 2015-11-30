@@ -511,7 +511,7 @@ used, e.g. when reading a webpage as a whole document.
    e=e.parentNode
   log("e=%s" % (dir(e),))
   log("form: %s, formAction: %s, formEnctype: %s, formMethod: %s, FormNoValidate: %s" % (e.form,e.formAction,e.formEnctype,e.formMethod,e.formNoValidate))
-  log("name:",e.name," title:",e.title," type:",e.type," nodeName:",e.nodeName," nodeType:",e.nodeType," nodeValue:",e.nodeValue," text:",e.text," textContent:",e.textContent," checked:",e.checked," default checked:",e.defaultChecked," hidden:",e.hidden," OPTIONS:",e.OPTIONS," options:",e.options," tagName:",e.tagName," select:",e.select," selectedOptions:",e.selectedOptions," value:",e.value," defaultValue:",e.defaultValue)
+  log("name:",e.name," title:",e.title," type:",e.type," nodeName:",e.nodeName," nodeType:",e.nodeType," nodeValue:",e.nodeValue," text:",e.text," textContent:",e.textContent," checked:",e.checked," default checked:",e.defaultChecked," hidden:",e.hidden," OPTIONS:",e.OPTIONS," options:",e.options," size:",e.size," length:",e.length," maxLength:",e.maxLength," tagName:",e.tagName," select:",e.select," selectedOptions:",e.selectedOptions," value:",e.value," defaultValue:",e.defaultValue)
   if e.nodeName=="OPTION":
 #   self.setStatus("HFI:option found")
    e=self.parentNodes(e,name="select",count=1)

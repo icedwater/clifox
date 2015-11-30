@@ -363,12 +363,16 @@ For instance, this would be used for a br element, where a line break is mandato
   return self.lst[idx].value
 
  def inputText(self,idx):
+  if self.lst[idx].value == '':
+   return '-'*self.lst[idx].size if self.lst[idx].size>0 and self.lst[idx].size<=40 else '-'*40
   return self.lst[idx].value
 
  def inputUnknown(self,idx):
   return self.inputText(idx)
 
  def inputPassword(self,idx):
+  if self.lst[idx].value == '':
+   return '-'*self.lst[idx].size if self.lst[idx].size>0 and self.lst[idx].size<=40 else '-'*40
   return "*"*len(self.lst[idx].value)
 
  def inputSubmit(self,idx):
