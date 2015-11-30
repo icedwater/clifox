@@ -183,6 +183,21 @@ readonly: whether to accept new text
   self.lastDraw=None
   self.draw()
 
+ def externalEdit(self):
+  if self.base.config.editor:
+   e=self.base.config.editor
+  elif os.environment.get("EDITOR"):
+   e=os.environment.get("EDITOR")
+  else:
+   return None
+  tempfile="/tmp/squigglitz"
+  open(tempfile,"wb").write(self.currentLine)
+  cmd="%s %s" % (e,tempfile)
+  os.system(cmd)
+  self.currentLine=open(tempfile,"rb").read()
+  os.remove(tempfile)
+  return self.currentLine
+ 
  def getunicode(self, c):
    tc = u' '
    buf = ''
@@ -304,6 +319,13 @@ readonly: whether to accept new text
     self.currentLine=u''
    elif c == 11:  # ^K
     self.currentLine=self.currentLine[:self.ptr]
+   elif c == curses.KEY_F2: # value 266 calling all editors
+    if self.externalEdit() == None:
+     self.setStatus("No system editor found")
+    else:
+     if self.history!=None and self.currentLine:
+      self.history.append(self.currentLine)
+     self.done=True
    else:
     if self.readonly:
      self.beepIfNeeded()
