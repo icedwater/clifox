@@ -430,7 +430,7 @@ used, e.g. when reading a webpage as a whole document.
    return self.setStatus("image %s" % d.src)
   elif d.nodeName=="TEXTAREA":
    return self.setStatus("textArea input, name %s" % d.name)
-  elif d.nodeName=="SELECT":
+  elif d.type=="SELECT":
    return self.setStatus("select list field")
   elif d.nodeName=="INPUT":
    if d.type=="checkbox":

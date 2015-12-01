@@ -346,10 +346,10 @@ For instance, this would be used for a br element, where a line break is mandato
   if nt=="Hidden":
    return ''
   value=getattr(self,"input"+nt,self.inputUnknown)(idx)
+  if self.lst[idx].disabled:
+   nm="disabled "+nm
   c=value
   c="["+c+"] "
-  if self.lst[idx].disabled:
-   c="disabled "+c
   return c
 
  def endInput(self,idx):
