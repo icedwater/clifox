@@ -379,7 +379,7 @@ used, e.g. when reading a webpage as a whole document.
     self.pageQ.put(dict(name="go",url=url,verify=False))
     return
    fErrPlain=fErr.strip("(").strip(")").replace("(",".").replace(")",".").replace("..",".")
-   ret=self.gListbox(values=["continue and save","cancel","continue"],title="Ignore SSL Certificate Verification security warning?",status=fErr)
+   ret=self.gListbox(base=self,screen=self.screen,items=["continue and save","cancel","continue"],title="Ignore SSL Certificate Verification security warning?",status=fErr)
    if "continue" in ret[-1]:
     self.pageQ.put(dict(name="go",url=url,verify=False))
    self.noverify.append(url.split("//",1)[1].split("/",1)[0])
@@ -400,13 +400,13 @@ used, e.g. when reading a webpage as a whole document.
    c=self.screen.getch()
    handled=cls.handleKey(c)
 
- def prompt(self,prompt="",y=None, x=None, history=None,text="",echo=None):
+ def prompt(self,prompt="",y=None, x=None, history=None,default="",echo=None):
   if y==None:
    y=self.entry
 #change to this once we have separation between form fields and their contents for rendering
 #   y=self.screen.getyx()[0]
   pos=self.screen.getyx()
-  cls=guiObjects.Readline(screen=self.screen,prompt=prompt,base=self,y=y,x=0,history=history,text=text,echo=echo)
+  cls=guiObjects.Readline(screen=self.screen,prompt=prompt,base=self,y=y,x=0,history=history,default=default,echo=echo)
   while not cls.done:
    c=self.screen.getch()
    handled=cls.handleKey(c)
@@ -522,27 +522,30 @@ used, e.g. when reading a webpage as a whole document.
    opts=[(i,i.textContent.strip()) for i in opts]
 #   log("e.options: length %d, selectedIndex %s, e.value=%s" % (e.options.length,e.options.selectedIndex,e.value))
    self.setStatus("gListbox,running")
-   ret=self.gListbox(screen=self.screen, title=e.name, items=opts, height=e.options.length, value=e.value, where=e.options.selectedIndex)
-   e.value=ret
+   ret=self.gListbox(base=self,screen=self.screen, title=e.name, items=opts, height=e.options.length if e.options.length<self.maxy-2 else self.maxy-2, default=e.options.selectedIndex)
+   opts[ret][0].selected=True
+#   e.value=ret
    log("listbox returned %s" % (ret,))
   elif e.nodeName=="INPUT" and e.type=="password":
-   ret=self.prompt(text=e.value,echo="*")
+   ret=self.prompt(default=e.value,echo="*")
    e.value=ret
   elif e.nodeName=="INPUT" and e.type=="text":
-   ret=self.prompt(text=e.value)
+   ret=self.prompt(default=e.value)
    e.value=ret
   elif e.nodeName=="TEXTAREA":
-   ret=self.prompt(text=e.textContent)
-   e.innerHTML=ret
+   ret=self.prompt(default=e.value)
+   e.value=ret
   elif e.nodeName=="INPUT" and e.type=="radio":
 #   self.setStatus("HFI:radio button")
    opts=[i for i in self.getElementsByTagName(baseForm,"input") if i.type=="radio" and i.name==e.name]
+   checked=[i for i in opts if i.checked]
+   checkedIndex=opts.index(checked[0]) if checked else 0
    log("radio opts=%s" % (opts,))
 #   checked=[i for i in opts if i.checked==1]
 #   checked=0 if len(checked)==0 else opts.index(checked[0])
    opts=[(i,i.value.strip()) for i in opts]
-   ret=self.gListbox(screen=self.screen, title=e.name, items=opts, value=e.value)
-   e.value=ret
+   ret=self.gListbox(screen=self.screen, title=e.name, items=opts, default=checkedIndex)
+#   e.value=ret
    log("radio:ret:",ret)
 #   if ret!=None:
 #    ret[0].checked=1
@@ -554,7 +557,7 @@ used, e.g. when reading a webpage as a whole document.
 #   e.checked=ret
    self.doClick(e)
   else:
-   ret=self.prompt(text=e.value)
+   ret=self.prompt(default=e.value)
    e.value=ret
   self.paintScreen()
   self.showScreen(screenNum=sn,y=y,x=x,force=1)

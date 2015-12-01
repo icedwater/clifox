@@ -6,7 +6,6 @@ from utils import log
 class GuiObject(object):
  done=0
 #valueProxy is None|String, where String can be used like getattr(self._value,String)
- valueProxy=None
  def beepIfNeeded(self):
   if self.base.config.beeps:
    curses.beep()
@@ -154,7 +153,7 @@ readonly: whether to accept new text
  def text(self,x):
   return setattr(self,"value",x) if not self.valueProxy else setattr(self.value,self.valueProxy,x)
 
- def __init__(self,screen=None, base=None, y=1, x=0, history=[], prompt=u"input", text=u"", echo=None, length=None, delimiter=u": ", readonly=0, proxy=None):
+ def __init__(self,screen=None, base=None, y=1, x=0, history=[], prompt=u"input", default=u"", echo=None, length=None, delimiter=u": ", readonly=0, proxy=None):
   self.valueProxy=proxy
   self.done=0
   self.base=base
@@ -162,7 +161,7 @@ readonly: whether to accept new text
   self.y,self.x=y,x
   self.history=history
   self.historyPos=len(self.history) if self.history else 0
-  self.text=text
+  self.value=default
   self.prompt=prompt
   self.delimiter=delimiter
   self.echo=echo
@@ -177,7 +176,7 @@ readonly: whether to accept new text
 #if not, startX is going to be wherever self.x is, as that's where our text is going to appear
   self.startX=len(self.s) if self.s else self.x
 #put ptr at the end of the current bit of text
-  self.currentLine=self.text
+  self.currentLine=self.value
   self.ptr=len(self.currentLine)
   self.insertMode=True
   self.lastDraw=None
@@ -221,6 +220,7 @@ readonly: whether to accept new text
 
  def draw(self):
   d=self.ptr,self.currentLine
+  log("rl:"+repr(d))
   if self.lastDraw and d==self.lastDraw:
    return
   self.screen.move(self.y,self.x)
@@ -231,7 +231,6 @@ readonly: whether to accept new text
   cnt=0
   if self.echo:
    t=str(self.echo)[:1]*len(t)
-   self.screen.addstr(self.y,self.startX,"".join(t))
   self.screen.addstr(self.y,self.startX,"".join(t))
   self.screen.move(self.y,self.startX+self.ptr)
   self.screen.refresh()
@@ -269,10 +268,9 @@ readonly: whether to accept new text
      msg="No history to move up through." if not self.history else "No previous history to move up through."
      self.setStatus(msg)
     elif self.history and self.historyPos>0:
-     if self.historyPos==len(self.history):
-      self.tempLine=self.currentLine
+     self.tempLine=self.currentLine
      self.historyPos-=1
-     self.currentLine=list(self.history[self.historyPos])
+     self.currentLine=self.history[self.historyPos]
      self.ptr=len(self.currentLine)
     else:
      self.setStatus("Something odd occured, readLine, up arrow")
@@ -556,45 +554,59 @@ class naEditbox(object):
   return status
 
 class Listbox(GuiObject):
- @property
- def where(self):
-  return self.value if not self.valueProxy else getattr(self.value,self.valueProxy)
- @where.setter
- def where(self,x):
-  return setattr(self,"value",x) if not self.valueProxy else setattr(self.value,self.valueProxy,x)
-
- def __init__(self,screen=None, base=None, y=0, x=0, height=10, title=None, items=[], value='', keysWaitTime=0.4, where=0):
+ """Listbox
+render a listbox to the screen in `title \n separator \n items` format
+y,x: y and x coordinates where to draw this window on the screen
+height: maximum height of this window on the screen, including title and separator
+base: base clifox object for accessing settings and other clifox state
+default: the index of the currently selected item
+title: the title of this select box (might be taken from the element on the webpage)
+keysWaitTime: maximum amount of time the system will consider a consecutive set of key-presses as a single search
+items: a list of options in string form, or a list of (id,option) tuples
+"""
+ def __init__(self,screen=None, base=None, y=0, x=0, height=10, title=None, items=[], keysWaitTime=0.4, default=0):
   self.screen=screen
   self.base=base
-  self.y,self.x=0,0
+  self.y,self.x=y,x
   self.title=title
+#if we've got a list of strings or a list of non-list objects, turn them into itemIndex,item
+#so ["a","b","c"] would become [[0,"a"],[1,"b"],[2,"c"]]
   if items and type(items[0]) not in (tuple,list):
    self.items=zip(xrange(len(items)),items)
   else:
    self.items=items
   self.keys=[]
   self.keysWaitTime=keysWaitTime
-  self.value=value
   self.height=height
-  self.where=where
+  self.selectedIndex=default
+  self.lastDraw=None
   self.draw()
 
  def draw(self):
-  show=self.items[0:self.height]
-  self.screen.move(self.y,0)
-  self.screen.clrtoeol()
-  self.screen.addstr(self.y,0,self.title)
-  sep='-'*len(self.title)
-  self.y += 1
-  self.screen.move(self.y,0)
-  self.screen.clrtoeol()
-  self.screen.addstr(self.y,0,sep)
-  sw=2
-  for idx,itm in zip(xrange(sw,sw+self.height),show):
-   self.screen.move(idx,0)
+  title=self.title
+  windowY=self.y
+  listHeight=self.height-2
+  start=self.selectedIndex//listHeight
+  startL=(start*listHeight)
+#if startL%lsitHiehgt==0 then we can clear the screen
+  endL=(start*listHeight)+listHeight
+  sw=windowY+2
+  if self.lastDraw!=(startL,endL):
+   show=self.items[startL:endL]
+   self.screen.move(windowY,0)
    self.screen.clrtoeol()
-   self.screen.addstr(idx,0,str(itm[1]))
-  self.screen.move(sw+self.where,0)
+   self.screen.addstr(windowY,0,title)
+   sep='-'*len(title)
+   self.screen.move(windowY+1,0)
+   self.screen.clrtoeol()
+   self.screen.addstr(windowY+1,0,sep)
+   for idx,itm in enumerate(show):
+    self.screen.move(idx+sw,0)
+    self.screen.clrtoeol()
+    self.screen.addstr(idx+sw,0,str(itm[1]))
+  self.lastDraw=(startL,endL)
+  self.screen.move(sw+(self.selectedIndex-startL),0)
+#  self.setStatus("%d:%d:%d" % (startL,endL,sw+self.selectedIndex-startL))
   self.screen.refresh()
 
  def search(self,key):
@@ -609,7 +621,8 @@ class Listbox(GuiObject):
   for i in self.items:
    j+=1
    if str(i[1]).lower().startswith(keys):
-    self.where=j
+    self.selectedIndex=j
+    break
 
  def handleKey(self,c):
   if c==-1:
@@ -617,21 +630,24 @@ class Listbox(GuiObject):
   if curses.ascii.isprint(c):
    self.search(chr(c))
   elif c==curses.KEY_UP:
-   if self.where==0:
-    self.where=len(self.items)-1
+   if self.selectedIndex==0:
+#we don't want to wrap around to the top
+    pass #self.selectedIndex=len(self.items)-1
+    self.beepIfNeeded()
    else:
-    self.where-=1
+    self.selectedIndex-=1
   elif c==curses.KEY_DOWN:
-   if self.where==len(self.items)-1:
-    self.where=0
+   if self.selectedIndex==len(self.items)-1:
+    pass #self.selectedIndex=0
+    self.beepIfNeeded()
    else:
-    self.where+=1
+    self.selectedIndex+=1
   elif c in (10, 261): # newline or right arrow
    self.done=1
-   return self.items[self.where][1]
+   return self.selectedIndex
   elif c==260: # left arrow quietly back out
    self.done=1
-   return self.value
+   return self.selectedIndex
   self.draw()
 
 class FileBrowser(Listbox):
