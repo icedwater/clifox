@@ -400,7 +400,7 @@ used, e.g. when reading a webpage as a whole document.
    c=self.screen.getch()
    handled=cls.handleKey(c)
 
- def prompt(self,prompt="",y=None, x=None, history=None,default="",maxLength=None,echo=None):
+ def prompt(self,prompt="",y=None, x=None, history=None,default="", maxLength=80,echo=None):
   if y==None:
    y=self.entry
 #change to this once we have separation between form fields and their contents for rendering
@@ -527,10 +527,10 @@ used, e.g. when reading a webpage as a whole document.
 #   e.value=ret
    log("listbox returned %s" % (ret,))
   elif e.nodeName=="INPUT" and e.type=="password":
-   ret=self.prompt(default=e.value,maxLength=e.maxLength,echo="*")
+   ret=self.prompt(default=e.value,maxLength=e.size if e.maxLength==-1 else e.maxLength,echo="*")
    e.value=ret
   elif e.nodeName=="INPUT" and e.type=="text":
-   ret=self.prompt(default=e.value,maxLength=e.maxLength)
+   ret=self.prompt(default=e.value,maxLength=e.size if e.maxLength==-1 else e.maxLength)
    e.value=ret
   elif e.nodeName=="TEXTAREA":
    ret=self.prompt(default=e.value)

@@ -128,7 +128,7 @@ length: the maximum length for this text entry (element.attr=maxlength is the co
 delimiter: the delimiter between prompt and text
 readonly: whether to accept new text
 """
- def __init__(self,screen=None, base=None, y=0, x=0, history=[], prompt=u"input", default=u"", echo=None, maxLength=None, delimiter=u": ", readonly=0):
+ def __init__(self,screen=None, base=None, y=0, x=0, history=[], prompt=u"input", default=u"", echo=None, maxLength=80, delimiter=u": ", readonly=0):
   self.value=default
   self.done=0
   self.base=base
@@ -317,7 +317,7 @@ readonly: whether to accept new text
         self.history.append(self.currentLine)
        self.done=True
        self.setStatus("Maximum field length reached.")
-   log("Readline:handle: currentLine=%s, c=%s, ptr=%d maxLength=%d" % (self.currentLine,c,self.ptr,self.maxLength))
+#   log("Readline:handle: currentLine=%s, c=%s, ptr=%d maxLength=%d" % (self.currentLine,c,self.ptr,self.maxLength))
       #handled keystroke
    self.draw()
    return 1
