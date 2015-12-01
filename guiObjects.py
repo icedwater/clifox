@@ -5,7 +5,6 @@ from utils import log
 
 class GuiObject(object):
  done=0
-#valueProxy is None|String, where String can be used like getattr(self._value,String)
  def beepIfNeeded(self):
   if self.base.config.beeps:
    curses.beep()
@@ -68,15 +67,7 @@ enter selects default button or displays error if not one
   return ret
 
 class Button(GuiObject):
- @property
- def selected(self):
-  return self.value if not self.valueProxy else getattr(self.value,self.valueProxy)
- @selected.setter
- def selected(self,x):
-  return setattr(self,"value",x) if not self.valueProxy else setattr(self.value,self.valueProxy,x)
-
- def __init__(self,screen=None,base=None,y=1,x=0,prompt="Button",proxy=None):
-  self.valueProxy=proxy
+ def __init__(self,screen=None,base=None,y=1,x=0,prompt="Button"):
   self.base=base
   self.screen=screen
   self.y,self.x=y,x
@@ -85,7 +76,7 @@ class Button(GuiObject):
   self.draw()
 
  def draw(self):
-  s="{%s}" % (self.prompt,)
+  s="[*%s]" % (self.prompt,)
   self.screen.addstr(self.y,self.x,s)
   self.screen.refresh()
 
@@ -103,35 +94,26 @@ base:base object
 y,x: coordinates for the top left point of this object on screen
 prompt: the text shown as the label for this control, set to None if the inPage setting is to be used with text from the current line
 """
- @property
- def checked(self):
-  return self.value if not self.valueProxy else getattr(self.value,self.valueProxy)
- @checked.setter
- def checked(self,x):
-  return setattr(self,"value",x) if not self.valueProxy else setattr(self.value,self.valueProxy,x)
-
- def __init__(self,screen=None,base=None,y=1,x=0,prompt="no prompt",checked=0,proxy=None):
-  self.valueProxy=proxy
+ def __init__(self,screen=None,base=None,y=1,x=0,prompt="no prompt",default=0):
   self.screen=screen
   self.base=base
   self.y,self.x=y,x
   self.prompt=prompt
+  self.default=default
   self.draw()
 
  def draw(self):
   if self.checked>0:
-   t="[x] "
+   t="[+] "
   else:
-   t="[ ] "
+   t="[-] "
   s="%s %s" % (t,self.prompt if self.prompt else "")
   self.screen.addstr(self.y,self.x,s)
   self.screen.refresh()
 
  def keyHandler(self,c):
-  log("chkbox:key:",c)
   if c==32:
    self.checked=0 if self.checked==1 else 1
-   log("chkbox:draw")
    self.draw()
    return 1
   return 0
@@ -146,21 +128,14 @@ length: the maximum length for this text entry (element.attr=maxlength is the co
 delimiter: the delimiter between prompt and text
 readonly: whether to accept new text
 """
- @property
- def text(self):
-  return self.value if not self.valueProxy else getattr(self.value,self.valueProxy)
- @text.setter
- def text(self,x):
-  return setattr(self,"value",x) if not self.valueProxy else setattr(self.value,self.valueProxy,x)
-
- def __init__(self,screen=None, base=None, y=1, x=0, history=[], prompt=u"input", default=u"", echo=None, maxLength=None, delimiter=u": ", readonly=0):
+ def __init__(self,screen=None, base=None, y=0, x=0, history=[], prompt=u"input", default=u"", echo=None, maxLength=None, delimiter=u": ", readonly=0):
+  self.value=default
   self.done=0
   self.base=base
   self.screen=screen
   self.y,self.x=y,x
   self.history=history
   self.historyPos=len(self.history) if self.history else 0
-  self.value=default
   self.prompt=prompt
   self.delimiter=delimiter
   self.echo=echo
@@ -192,7 +167,9 @@ readonly: whether to accept new text
   open(tempfile,"wb").write(self.currentLine)
   cmd="%s %s" % (e,tempfile)
   os.system(cmd)
-  self.currentLine=open(tempfile,"rb").read()
+  fh=open(tempfile,"rb")
+  self.currentLine=fh.read()
+  fh.close()
   os.remove(tempfile)
   return self.currentLine
  
@@ -200,7 +177,6 @@ readonly: whether to accept new text
    tc = u' '
    buf = ''
    done = False
-
    nc = chr(c)
 #   log("getunicode: in while nc=%d" % (ord(nc),))
    buf+=nc
@@ -222,6 +198,8 @@ readonly: whether to accept new text
   log("rl:"+repr(d))
   if self.lastDraw and d==self.lastDraw:
    return
+  loc=self.x
+  t=self.s
   self.screen.move(self.y,self.x)
   self.screen.clrtoeol()
   if self.s:
@@ -363,12 +341,10 @@ class naEditbox(object):
  Move operations do nothing if the cursor is at an edge where the movement is not possible.  The following synonyms are supported where possible:
  KEY_LEFT = Ctrl-B, KEY_RIGHT = Ctrl-F, KEY_UP = Ctrl-P, KEY_DOWN = Ctrl-N, KEY_BACKSPACE = Ctrl-h
  """
- def __init__(self, screen=None, base=None, y=1, x=0,text="edit field",proxy=None):
-  self.valueProxy=proxy
+ def __init__(self, screen=None, base=None, y=1, x=0,default="edit field"):
   self.base=base
-  self.default="Edit Field"
-  [setattr(self,k,v) for k,v in kw.items()]
-  self.win=self.screen
+  self.value=default
+  self.win=screen
   self.loop=self.edit
   callback=validate=None
   (self.maxy, self.maxx) = self.win.getmaxyx()
@@ -655,14 +631,14 @@ items: a list of options in string form, or a list of (id,option) tuples
   self.draw()
 
 class FileBrowser(Listbox):
- def __init__(self,**kw):
+ def __init__(self,screen=None,base=None,y=0,x=0,default="./",title="Browse"):
   self.offset=0
   self.pos=1
-  kw['title']=""
   self._dir=""
   self.dir_history={}
-  self.dir=kw.get("dir",os.environ.get("HOME","/"))
-  self.title=self.dir
+  if default:
+   self.dir=default if default else os.environ.get("HOME","/")
+  self.title=title if title else self.dir
   Listbox.__init__(self,**kw)
 
  def makeNewList(self):
