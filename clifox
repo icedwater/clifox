@@ -406,7 +406,7 @@ used, e.g. when reading a webpage as a whole document.
 #change to this once we have separation between form fields and their contents for rendering
 #   y=self.screen.getyx()[0]
   pos=self.screen.getyx()
-  cls=guiObjects.Readline(screen=self.screen,prompt=prompt,base=self,y=y,x=0,history=history,default=text,maxLength=maxLength,echo=echo)
+  cls=guiObjects.Readline(screen=self.screen,prompt=prompt,base=self,y=y,x=0,history=history,default=default,maxLength=maxLength,echo=echo)
   while not cls.done:
    c=self.screen.getch()
    handled=cls.handleKey(c)
