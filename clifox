@@ -400,13 +400,13 @@ used, e.g. when reading a webpage as a whole document.
    c=self.screen.getch()
    handled=cls.handleKey(c)
 
- def prompt(self,prompt="",y=None, x=None, history=None,default="",echo=None):
+ def prompt(self,prompt="",y=None, x=None, history=None,default="",maxLength=None,echo=None):
   if y==None:
    y=self.entry
 #change to this once we have separation between form fields and their contents for rendering
 #   y=self.screen.getyx()[0]
   pos=self.screen.getyx()
-  cls=guiObjects.Readline(screen=self.screen,prompt=prompt,base=self,y=y,x=0,history=history,default=default,echo=echo)
+  cls=guiObjects.Readline(screen=self.screen,prompt=prompt,base=self,y=y,x=0,history=history,default=text,maxLength=maxLength,echo=echo)
   while not cls.done:
    c=self.screen.getch()
    handled=cls.handleKey(c)
@@ -527,10 +527,10 @@ used, e.g. when reading a webpage as a whole document.
 #   e.value=ret
    log("listbox returned %s" % (ret,))
   elif e.nodeName=="INPUT" and e.type=="password":
-   ret=self.prompt(default=e.value,echo="*")
+   ret=self.prompt(default=e.value,maxLength=e.maxLength,echo="*")
    e.value=ret
   elif e.nodeName=="INPUT" and e.type=="text":
-   ret=self.prompt(default=e.value)
+   ret=self.prompt(default=e.value,maxLength=e.maxLength)
    e.value=ret
   elif e.nodeName=="TEXTAREA":
    ret=self.prompt(default=e.value)

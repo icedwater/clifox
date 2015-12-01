@@ -153,8 +153,7 @@ readonly: whether to accept new text
  def text(self,x):
   return setattr(self,"value",x) if not self.valueProxy else setattr(self.value,self.valueProxy,x)
 
- def __init__(self,screen=None, base=None, y=1, x=0, history=[], prompt=u"input", default=u"", echo=None, length=None, delimiter=u": ", readonly=0, proxy=None):
-  self.valueProxy=proxy
+ def __init__(self,screen=None, base=None, y=1, x=0, history=[], prompt=u"input", default=u"", echo=None, maxLength=None, delimiter=u": ", readonly=0):
   self.done=0
   self.base=base
   self.screen=screen
@@ -166,7 +165,7 @@ readonly: whether to accept new text
   self.delimiter=delimiter
   self.echo=echo
   self.readonly=readonly
-  self.length=length
+  self.maxLength=maxLength
 #prompt and delimiter
   self.s=u"%s%s" % (self.prompt,self.delimiter,) if self.prompt else ""
 #position in the currently-being-editted text
@@ -331,11 +330,16 @@ readonly: whether to accept new text
     else:
      uchar=self.getunicode(c)
      if not self.insertMode:
-      self.currentLine[self.ptr]=t
+      self.currentLine[self.ptr]=uchar
      else:
       self.currentLine=u"%s%s%s" % (self.currentLine[:self.ptr],uchar,self.currentLine[self.ptr:])
       self.ptr+=1
-#    log("Readline:handle: currentLine=%s, uchar=%s c=%s, ptr=%d" % (self.currentLine,uchar,c,self.ptr))
+      if self.ptr >= self.maxLength:
+       if self.history!=None and self.currentLine:
+        self.history.append(self.currentLine)
+       self.done=True
+       self.setStatus("Maximum field length reached.")
+   log("Readline:handle: currentLine=%s, c=%s, ptr=%d maxLength=%d" % (self.currentLine,c,self.ptr,self.maxLength))
       #handled keystroke
    self.draw()
    return 1
