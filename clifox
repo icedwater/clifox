@@ -527,10 +527,10 @@ used, e.g. when reading a webpage as a whole document.
 #   e.value=ret
    log("listbox returned %s" % (ret,))
   elif e.nodeName=="INPUT" and e.type=="password":
-   ret=self.prompt(default=e.value,maxLength=e.size if e.maxLength==-1 else e.maxLength,echo="*")
+   ret=self.prompt(default=e.value,maxLength=e.maxLength,echo="*")
    e.value=ret
   elif e.nodeName=="INPUT" and e.type=="text":
-   ret=self.prompt(default=e.value,maxLength=e.size if e.maxLength==-1 else e.maxLength)
+   ret=self.prompt(default=e.value,maxLength=e.maxLength)
    e.value=ret
   elif e.nodeName=="TEXTAREA":
    ret=self.prompt(default=e.value)
