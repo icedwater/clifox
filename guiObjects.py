@@ -318,11 +318,7 @@ readonly: whether to accept new text
         self.history.append(self.currentLine)
        self.done=True
        self.setStatus("Maximum field length reached.")
-<<<<<<< HEAD
-#   log("Readline:handle: currentLine=%s, c=%s, ptr=%d maxLength=%d" % (self.currentLine,c,self.ptr,self.maxLength))
-=======
    log("Readline:handle: currentLine=%s, c=%s, ptr=%d, maxLength=%d" % (self.currentLine,c,self.ptr,self.maxLength,))
->>>>>>> cc56abc84e0b86771c500881e852c853cc88bc57
       #handled keystroke
    self.draw()
    return 1
