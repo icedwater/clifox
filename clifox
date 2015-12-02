@@ -543,14 +543,10 @@ used, e.g. when reading a webpage as a whole document.
    log("radio opts=%s" % (opts,))
 #   checked=[i for i in opts if i.checked==1]
 #   checked=0 if len(checked)==0 else opts.index(checked[0])
-   opts=[(i,i.value.strip()) for i in opts]
-   ret=self.gListbox(screen=self.screen, title=e.name, items=opts, default=checkedIndex)
-#   e.value=ret
+   listOpts=[(i,i.value.strip()) for i in opts]
+   ret=self.gListbox(screen=self.screen, title=e.name, items=listOpts, default=checkedIndex)
+   opts[ret].checked=true
    log("radio:ret:",ret)
-#   if ret!=None:
-#    ret[0].checked=1
-#    self.doClick(ret[0])
-#[self.doClick(o) for o,p in opts if o==ret[0]]
   elif e.nodeName=="INPUT" and e.type=="checkbox":
 #   self.setStatus("HFI:checkbox")
    ret=False if e.checked==True else True

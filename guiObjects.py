@@ -121,6 +121,7 @@ prompt: the text shown as the label for this control, set to None if the inPage 
 class Readline(GuiObject):
  """
 prompt for user input, with bindings to that of the default readline implimentation
+prompt: prompt displayed before the users text
 history: a list of strings which constitutes the previously entered set of strings given to the caller of this function during previous calls
 text: the default text, entered as if the user had typed it directly
 echo: acts as a mask for passwords (set to ' ' in order to not echo any visible character for passwords)
@@ -312,12 +313,16 @@ readonly: whether to accept new text
      else:
       self.currentLine=u"%s%s%s" % (self.currentLine[:self.ptr],uchar,self.currentLine[self.ptr:])
       self.ptr+=1
-      if self.ptr >= self.maxLength:
+      if self.maxLength>0 and self.ptr >= self.maxLength:
        if self.history!=None and self.currentLine:
         self.history.append(self.currentLine)
        self.done=True
        self.setStatus("Maximum field length reached.")
+<<<<<<< HEAD
 #   log("Readline:handle: currentLine=%s, c=%s, ptr=%d maxLength=%d" % (self.currentLine,c,self.ptr,self.maxLength))
+=======
+   log("Readline:handle: currentLine=%s, c=%s, ptr=%d, maxLength=%d" % (self.currentLine,c,self.ptr,self.maxLength,))
+>>>>>>> cc56abc84e0b86771c500881e852c853cc88bc57
       #handled keystroke
    self.draw()
    return 1
