@@ -518,12 +518,18 @@ used, e.g. when reading a webpage as a whole document.
   if e.nodeName=="SELECT":
 #   self.setStatus("HFI:select")
    opts=e.options
+   if e.multiple:
+    default=[idx for idx,t in enumerate(opts) if t.selected]
+   else:
+    default=e.selectedIndex
 #getElementsByTagName("option")
    opts=[(i,i.textContent.strip()) for i in opts]
 #   log("e.options: length %d, selectedIndex %s, e.value=%s" % (e.options.length,e.options.selectedIndex,e.value))
-   self.setStatus("gListbox,running")
-   ret=self.gListbox(base=self,screen=self.screen, title=e.name, items=opts, height=e.options.length if e.options.length<self.maxy-2 else self.maxy-2, default=e.options.selectedIndex)
-   opts[ret][0].selected=True
+   ret=self.gListbox(base=self,screen=self.screen, title=e.name, items=opts, default=default,multiple=e.multiple)
+   if e.multiple:
+    [setattr(opts[i][0],"selected",True) for i in ret]
+   else:
+    opts[ret][0].selected=True
 #   e.value=ret
    log("listbox returned %s" % (ret,))
   elif e.nodeName=="INPUT" and e.type=="password":

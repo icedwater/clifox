@@ -305,13 +305,7 @@ For instance, this would be used for a br element, where a line break is mandato
   self.fnl(idx)
   n=self.lst[idx]
   nm=self.getInputName(idx)
-  if n.selectedIndex>=0:
-   try:
-    v=n.options[n.selectedIndex].textContent
-   except:
-    v=n.options[0].textContent
-  else:
-   v=n.options[0].textContent
+  v=", ".join([i.textContent for i in n.options if i.selected])
   c=v if v else ''
   c="["+c+"] "
   return c
