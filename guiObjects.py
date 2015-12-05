@@ -575,28 +575,38 @@ class Listbox(GuiObject):
  """Listbox
 render a listbox to the screen in `title \n separator \n items` format
 y,x: y and x coordinates where to draw this window on the screen
-height: maximum height of this window on the screen, including title and separator
+height: maximum height of this window on the screen, including title and separator (defaults to the length of the list, or the height of the window)
 base: base clifox object for accessing settings and other clifox state
-default: the index of the currently selected item
+default: the index of the currently selected item (or a list of selected items, if multiple is true)
 title: the title of this select box (might be taken from the element on the webpage)
 keysWaitTime: maximum amount of time the system will consider a consecutive set of key-presses as a single search
 items: a list of options in string form, or a list of (id,option) tuples
+multiple: whether to allow selecting multiple options
 """
- def __init__(self,screen=None, base=None, y=0, x=0, height=10, title=None, items=[], keysWaitTime=0.4, default=0):
+ def __init__(self,screen=None, base=None, y=0, x=0, height=None, title=None, items=[], keysWaitTime=0.4, default=0,multiple=False):
   self.screen=screen
   self.base=base
+  self.multiple=multiple
   self.y,self.x=y,x
   self.title=title
 #if we've got a list of strings or a list of non-list objects, turn them into itemIndex,item
 #so ["a","b","c"] would become [[0,"a"],[1,"b"],[2,"c"]]
   if items and type(items[0]) not in (tuple,list):
-   self.items=zip(xrange(len(items)),items)
+   items=zip(xrange(len(items)),items)
   else:
-   self.items=items
+   items=items
+  items=[(i,str(j)) for i,j in items]
+  self.items=items
   self.keys=[]
+  self.lastKeyTime=-1
   self.keysWaitTime=keysWaitTime
+  if height==None:
+   height=(len(self.items)+2) if (len(self.items)+2)<self.base.maxy-2 else self.base.maxy-2
   self.height=height
-  self.selectedIndex=default
+  if type(default) not in (list,tuple):
+   default=[default]
+  self.selections=default
+  self.pos=self.selections[0]
   self.lastDraw=None
   self.draw()
 
@@ -604,12 +614,12 @@ items: a list of options in string form, or a list of (id,option) tuples
   title=self.title
   windowY=self.y
   listHeight=self.height-2
-  start=self.selectedIndex//listHeight
+  start=self.pos//listHeight
   startL=(start*listHeight)
 #if startL%lsitHiehgt==0 then we can clear the screen
   endL=(start*listHeight)+listHeight
   sw=windowY+2
-  if self.lastDraw!=(startL,endL):
+  if self.lastDraw!=(startL,endL,[i for i in self.selections]):
    show=self.items[startL:endL]
    self.screen.move(windowY,0)
    self.screen.clrtoeol()
@@ -621,51 +631,61 @@ items: a list of options in string form, or a list of (id,option) tuples
    for idx,itm in enumerate(show):
     self.screen.move(idx+sw,0)
     self.screen.clrtoeol()
-    self.screen.addstr(idx+sw,0,str(itm[1]))
-  self.lastDraw=(startL,endL)
-  self.screen.move(sw+(self.selectedIndex-startL),0)
-#  self.setStatus("%d:%d:%d" % (startL,endL,sw+self.selectedIndex-startL))
+    if self.multiple:
+     s="[%s] %s" % (("+" if startL+idx in self.selections else "-"),itm[1],)
+    else:
+     s="%s" % (itm[1],)
+    self.screen.addstr(idx+sw,0,s)
+  self.lastDraw=(startL,endL,[i for i in self.selections])
+  self.screen.move(sw+(self.pos-startL),0)
+#  self.setStatus("height=%d:startL=%d:endL=%d:pos=%d" % (self.height,startL,endL,sw+self.pos-startL))
   self.screen.refresh()
 
  def search(self,key):
   t=time.time()
-  if key in string.printable and (self.keys and t-self.keys[-1][0]<self.keysWaitTime):
-   self.keys.append((t,key))
+  if key in string.printable and (self.keys and t-self.lastKeyTime<self.keysWaitTime):
+   self.keys.append(key)
+   self.lastKeyTIme=t
   else:
-   self.keys=[(t,key)]
-  keys="".join([i[1] for i in self.keys])
+   self.keys=[key]
+  keys="".join(self.keys)
   keys=keys.lower()
   j=-1
   for i in self.items:
    j+=1
    if str(i[1]).lower().startswith(keys):
-    self.selectedIndex=j
+    self.pos=j
     break
 
  def handleKey(self,c):
   if c==-1:
    return None
-  if curses.ascii.isprint(c):
+  if self.multiple and c==32:
+   if self.pos in self.selections:
+    self.selections.remove(self.pos)
+   else:
+    self.selections.append(self.pos)
+  elif curses.ascii.isprint(c):
    self.search(chr(c))
   elif c==curses.KEY_UP:
-   if self.selectedIndex==0:
+   if self.pos==0:
 #we don't want to wrap around to the top
-    pass #self.selectedIndex=len(self.items)-1
+    pass #self.pos=len(self.items)-1
     self.beepIfNeeded()
    else:
-    self.selectedIndex-=1
+    self.pos-=1
   elif c==curses.KEY_DOWN:
-   if self.selectedIndex==len(self.items)-1:
-    pass #self.selectedIndex=0
+   if self.pos==len(self.items)-1:
+    pass #self.pos=0
     self.beepIfNeeded()
    else:
-    self.selectedIndex+=1
+    self.pos+=1
   elif c in (10, 261): # newline or right arrow
    self.done=1
-   return self.selectedIndex
+   return self.selections if self.multiple else self.pos
   elif c==260: # left arrow quietly back out
    self.done=1
-   return self.selectedIndex
+   return self.selections if self.multiple else self.pos
   self.draw()
 
 class FileBrowser(Listbox):

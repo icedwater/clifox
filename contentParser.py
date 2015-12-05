@@ -133,8 +133,7 @@ Text is wrapped, and ends for each line at columnStart+len(lineNodeText).
 #   else:
     text=self.spaces.sub(" ",text)
    new=self.wrapText(text,self.maxx,self.x,self.inPre)
-   if type(new)!=list:
-    new=[new]
+#wrapText always returns a list
    while new:
     l=new.pop(0)
     if not self.ret.get(self.y,None):
@@ -298,22 +297,16 @@ For instance, this would be used for a br element, where a line break is mandato
   return self.lst[idx].nodeValue
 
  def option(self,idx):
-  self.skip=self.SKIP_CHILDREN
   return ''
 
  def select(self,idx):
   self.fnl(idx)
   n=self.lst[idx]
   nm=self.getInputName(idx)
-  if n.selectedIndex>=0:
-   try:
-    v=n.options[n.selectedIndex].textContent
-   except:
-    v=n.options[0].textContent
-  else:
-   v=n.options[0].textContent
+  v=", ".join([i.textContent for i in n.options if i.selected])
   c=v if v else ''
   c="["+c+"] "
+  self.skip=self.SKIP_CHILDREN
   return c
 
  def endSelect(self,idx):

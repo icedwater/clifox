@@ -130,7 +130,7 @@ class gui(forms):
  def y(self,v):
   self.curPos[0]=v
 
- formElements=set("TEXTAREA,BUTTON,INPUT,SELECT,OPTION".split(","))
+ formElements=set("TEXTAREA,BUTTON,INPUT,SELECT".split(","))
  newLineMakerElements=set("BR,P".split(","))
  newLineElements=set("FORM,TITLE,HR,LI,TD,H1,H2,H3,H4,H5,H6,BR,P,A,IMG,SOUND,BGSOUND".split(","))
  [newLineElements.add(i) for i in formElements if i!="OPTION"]

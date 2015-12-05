@@ -430,7 +430,7 @@ used, e.g. when reading a webpage as a whole document.
    return self.setStatus("image %s" % d.src)
   elif d.nodeName=="TEXTAREA":
    return self.setStatus("textArea input, name %s" % d.name)
-  elif d.type=="SELECT":
+  elif d.nodeName=="SELECT":
    return self.setStatus("select list field")
   elif d.nodeName=="INPUT":
    if d.type=="checkbox":
@@ -518,14 +518,20 @@ used, e.g. when reading a webpage as a whole document.
   if e.nodeName=="SELECT":
 #   self.setStatus("HFI:select")
    opts=e.options
+   if e.multiple:
+    default=[idx for idx,t in enumerate(opts) if t.selected]
+   else:
+    default=e.selectedIndex
 #getElementsByTagName("option")
    opts=[(i,i.textContent.strip()) for i in opts]
 #   log("e.options: length %d, selectedIndex %s, e.value=%s" % (e.options.length,e.options.selectedIndex,e.value))
-   self.setStatus("gListbox,running")
-   ret=self.gListbox(base=self,screen=self.screen, title=e.name, items=opts, height=e.options.length if e.options.length<self.maxy-2 else self.maxy-2, default=e.options.selectedIndex)
-   opts[ret][0].selected=True
+   ret=self.gListbox(base=self,screen=self.screen, title=e.name, items=opts, default=default,multiple=e.multiple)
+   if e.multiple:
+    [setattr(opts[i][0],"selected",True if i in ret else False) for i in xrange(len(opts))]
+   else:
+    opts[ret][0].selected=True
 #   e.value=ret
-   log("listbox returned %s" % (ret,))
+#   log("listbox returned %s" % (ret,))
   elif e.nodeName=="INPUT" and e.type=="password":
    ret=self.prompt(default=e.value,maxLength=e.maxLength,echo="*")
    e.value=ret
@@ -540,13 +546,13 @@ used, e.g. when reading a webpage as a whole document.
    opts=[i for i in self.getElementsByTagName(baseForm,"input") if i.type=="radio" and i.name==e.name]
    checked=[i for i in opts if i.checked]
    checkedIndex=opts.index(checked[0]) if checked else 0
-   log("radio opts=%s" % (opts,))
+#   log("radio opts=%s" % (opts,))
 #   checked=[i for i in opts if i.checked==1]
 #   checked=0 if len(checked)==0 else opts.index(checked[0])
    listOpts=[(i,i.value.strip()) for i in opts]
-   ret=self.gListbox(screen=self.screen, title=e.name, items=listOpts, default=checkedIndex)
-   opts[ret].checked=true
-   log("radio:ret:",ret)
+   ret=self.gListbox(screen=self.screen, base=self, title=e.name, items=listOpts, default=checkedIndex)
+   opts[ret].checked=True
+#   log("radio:ret:",ret)
   elif e.nodeName=="INPUT" and e.type=="checkbox":
 #   self.setStatus("HFI:checkbox")
    ret=False if e.checked==True else True
