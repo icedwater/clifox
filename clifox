@@ -55,6 +55,10 @@ similar in concept to a tab in Firefox
   return output
 
  @property
+ def acc(self):
+  return self.js.clifox.accNode(self.f)
+
+ @property
  def f(self):
   return self.getFocusedElement()
 

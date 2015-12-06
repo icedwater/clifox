@@ -410,6 +410,22 @@ name="onStateChangeAll";
 
 };
 
+clifox.accObserver=function() {
+    this.obs = Cc["@mozilla.org/observer-service;1"].getService(Ci.nsIObserverService);
+    this.obs.addObserver(this, "accessible-event",false);
+this.ar=Cc["@mozilla.org/accessibleRetrieval;1"].getService(Ci.nsIAccessibleRetrieval);
+};
+clifox.accObserver.prototype={
+kill:function() {
+this.obs.removeObserver(this,"accessible-event",false);
+},
+    observe: function(aSubject, aTopic, aData) {
+var e,t;
+e=aSubject.QueryInterface(Ci.nsIAccessibleEvent);
+t=this.ar.getStringEventType(e.eventType);
+clifox.note("acc:"+t);
+},
+};
 clifox.observer = function() {
     this.obs = Cc["@mozilla.org/observer-service;1"].getService(Ci.nsIObserverService);
     this.obs.addObserver(this, "content-document-global-created", false);
@@ -439,6 +455,12 @@ var o;
     },
 };
 
+clifox.accNode=function(node) {
+if(!this.ar) {
+this.ar=Cc["@mozilla.org/accessibleRetrieval;1"].getService(Ci.nsIAccessibleRetrieval);
+}
+return this.ar.getAccessibleFor(node);
+};
 clifox.accView = function(aDocument) {
     function getAccessibleDoc(doc) {
         this.ar = Cc["@mozilla.org/accessibleRetrieval;1"].getService(Ci.nsIAccessibleRetrieval);
@@ -724,12 +746,15 @@ continue;
     return tabs;
 };
 clifox.kill = function() {
+//clifox.accObs.kill();
+//delete clifox.accObs;
     clifox.obs.kill();
     delete clifox.obs;
     clifox.gl.kill();
     delete clifox.gl;
 };
 clifox.init = function() {
+//clifox.accObs=new clifox.accObserver();
     clifox.obs = new clifox.observer();
     clifox.gl = new clifox.GuiListener();
     if (!clifox.fm) {
