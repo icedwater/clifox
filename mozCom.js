@@ -95,8 +95,13 @@ clifox.note = function() {
     });
 };
 clifox.addTab = function(url, tab) {
-    var t;
-    t = tab.parentNode.ownerDocument.defaultView.gBrowser.addTab();
+    var t,pt;
+if(tab) {
+pt=tab.parentNode.ownerDocument.defaultView.gBrowser;
+} else {
+pt=window.gBrowser;
+}
+    t=pt.addTab.apply(pt,[]);
     t.linkedBrowser.loadURI(url);
 return t;
 };
@@ -172,6 +177,11 @@ clifox.getDomList = function(root, endings) {
 clifox.time = function() {
     var d = new Date().getTime() / 1000;
     return d;
+};
+clifox.closeTab=function(tab) {
+var w;
+w=tab.ownerDocument.defaultView;
+w.setTimeout(w.gBrowser.removeCurrentTab.bind(w.gBrowser),250);
 };
 clifox.closeAll = function() {
     var i;

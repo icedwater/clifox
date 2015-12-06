@@ -348,10 +348,17 @@ used, e.g. when reading a webpage as a whole document.
   self.dom.location.href=fn
 
  def closePage(self):
+  doExit=False
+  if self.js.clifox.listAllTabs().length==1:
+#if closing last tab, browser will close
+   doExit=True
   try:
-   self.page.ownerDocument.defaultView.gBrowser.removeCurrentTab()
-  except:
-   pass
+#   self.page.ownerDocument.defaultView.gBrowser.removeCurrentTab()
+   self.js.clifox.closeTab(self.page)
+   if doExit:
+    self.exit()
+  except Exception,e:
+   log("error closing tab:"+str(e))
 
  def navigate(self,c=""):
   go=self.prompt(prompt="url",y=self.entry, history=None)
