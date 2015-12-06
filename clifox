@@ -411,7 +411,7 @@ used, e.g. when reading a webpage as a whole document.
    c=self.screen.getch()
    handled=cls.handleKey(c)
 
- def prompt(self,prompt="",y=None, x=None, history=None,default="", maxLength=80,echo=None):
+ def prompt(self,prompt="",y=None, x=None, history=None,default="", maxLength=2048,echo=None):
   if y==None:
    y=self.entry
 #change to this once we have separation between form fields and their contents for rendering
@@ -550,7 +550,7 @@ used, e.g. when reading a webpage as a whole document.
    ret=self.prompt(default=e.value,maxLength=e.maxLength)
    e.value=ret
   elif e.nodeName=="TEXTAREA":
-   ret=self.prompt(default=e.value)
+   ret=self.gEditbox(screen=self.screen,base=self,y=0,x=0,default=e.value)
    e.value=ret
   elif e.nodeName=="INPUT" and e.type=="radio":
 #   self.setStatus("HFI:radio button")

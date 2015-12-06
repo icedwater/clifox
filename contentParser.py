@@ -288,7 +288,7 @@ For instance, this would be used for a br element, where a line break is mandato
   self.skip=self.SKIP_CHILDREN
   n=self.lst[idx]
   nm=self.getInputName(idx)
-  v=n.valu
+  v=n.value
   c=v if v else ''
   return "["+c+"] "
 

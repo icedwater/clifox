@@ -76,7 +76,7 @@ class Button(GuiObject):
   self.draw()
 
  def draw(self):
-  s="[*%s]" % (self.prompt,)
+  s="[*%s] I'm in button" % (self.prompt,)
   self.screen.addstr(self.y,self.x,s)
   self.screen.refresh()
 
@@ -129,7 +129,7 @@ length: the maximum length for this text entry (element.attr=maxlength is the co
 delimiter: the delimiter between prompt and text
 readonly: whether to accept new text
 """
- def __init__(self,screen=None, base=None, y=0, x=0, history=[], prompt=u"input", default=u"", echo=None, maxLength=80, delimiter=u": ", readonly=0):
+ def __init__(self,screen=None, base=None, y=0, x=0, history=[], prompt=u"input", default=u"", echo=None, maxLength=2048, delimiter=u": ", readonly=0):
   self.value=default
   self.done=0
   self.base=base
@@ -196,7 +196,6 @@ readonly: whether to accept new text
 
  def draw(self):
   d=self.ptr,self.currentLine
-  log("rl:"+repr(d))
   if self.lastDraw and d==self.lastDraw:
    return
   loc=self.x
@@ -323,7 +322,7 @@ readonly: whether to accept new text
    self.draw()
    return 1
 
-class naEditbox(object):
+class Editbox(object):
  """Editing widget using the interior of a window object.
   Supports the following Emacs-like key bindings:
  Ctrl-A   Go to left edge of window.
@@ -347,34 +346,27 @@ class naEditbox(object):
   self.value=default
   self.win=screen
   self.loop=self.edit
-  callback=validate=None
   (self.maxy, self.maxx) = self.win.getmaxyx()
   self.maxy -= 2
   self.maxx -= 1
   self.stripspaces = 1
   self.lastcmd = None
-  self.validate = validate
-  self.callback = callback
   self.text = [[] for y in xrange(self.maxy+1)]
   self.win.keypad(1)
+  self.win.move(0,0)
 
  def text_insert(self, y, x, ch):
   if len(self.text[y]) > x:
    self.text[y].insert(x, ch)
   else: # <= x
-   self.text[y] += [curses.ascii.SP] * (x - len(self.text[y]))
+#   self.text[y] += [curses.ascii.SP] * (x - len(self.text[y]))
    self.text[y].append(ch)
+  log("text_insert_ch: ch=%s, y=%d, x=%d" % (ch,y,x))
 
  def text_delete(self, y, x):
   if y < 0 or x < 0 or y >= len(self.text) or x >= len(self.text[y]): return
   del self.text[y][x]
  
- def text_delete_line(self,y,x=0):
-  del self.text[y][x:]
-
- def text_insert_line(y):
-  self.text.insert(y, [])
-
  def _end_of_line(self, y):
   """Go to the location of the first blank on the given line."""
   last = self.maxx
@@ -391,88 +383,108 @@ class naEditbox(object):
   "Process a single editing command."
   (y, x) = self.win.getyx()
   self.lastcmd = ch
-  if curses.ascii.isprint(ch):
-   if y < self.maxy or x < self.maxx:
-    # The try-catch ignores the error we trigger from some curses
-    # versions by trying to write into the lowest-rightmost spot
-    # in the window.
-    try:
-     self.text_insert(y, x, ch)
-     self.win.addstr(y, 0, ''.join([chr(curses.ascii.ascii(ch)) for ch in self.text[y]]))
-     self.win.move(y, x+1)
-    except curses.error:
-     pass
-  elif ch == curses.ascii.SOH:         # ^a
-   self.win.move(y, 0)
+#  log("do_command:top ch=%s, y=%d, x=%d" % (ch,y,x))
+  if ch == curses.ascii.SOH:         # ^a
+   x=0
+   self.win.move(y, x)
   elif ch in (curses.ascii.STX,curses.KEY_LEFT, curses.ascii.BS, curses.KEY_BACKSPACE,127):
    if x > 0:
-    self.win.move(y, x-1)
+    x-=1
+    self.win.move(y, x)
    elif y == 0:
     pass
-   elif self.stripspaces:
-    self.win.move(y-1, self._end_of_line(y-1))
    else:
-    self.win.move(y-1, self.maxx)
-   if ch in (curses.ascii.BS, curses.KEY_BACKSPACE,127):
+    y-=1
+    x=len(self.text[y])-1 #if len(self.text[y])<self.maxx else self.maxx
+    self.win.move(y, x)
+   if ch in (curses.ascii.BS, curses.KEY_BACKSPACE, 127):
     self.win.delch()
     y, x = self.win.getyx()
     self.text_delete(y, x)
-  elif ch == curses.ascii.EOT:         # ^d
+  elif ch in (curses.ascii.EOT, curses.KEY_DC):         # ^d
    self.win.delch()
    self.text_delete(y, x)
   elif ch == curses.ascii.ENQ:         # ^e
-   if self.stripspaces:
-    self.win.move(y, self._end_of_line(y))
-   else:
-    self.win.move(y, self.maxx)
+   x = len(self.text[y]) if len(self.text[y])<self.maxx else self.maxx
+   self.win.move(y, x)
   elif ch in (curses.ascii.ACK, curses.KEY_RIGHT):    # ^f
-   ln=self._end_of_line(y)
-   if x < self.maxx and x<ln and self.stripspaces:
-    self.win.move(y, x+1)
+   if x < self.maxx and x < len(self.text[y]):
+    x+=1
+    self.win.move(y, x)
    elif y == self.maxy:
     pass
    else:
-    self.win.move(y+1, 0)
-  elif ch == curses.ascii.BEL:         # ^g
-   return True
-  elif ch in (curses.ascii.NL, curses.ascii.CR):    # ^j ^m
-   if self.maxy == 0:
-    return True
-   elif y < self.maxy:
-    self.win.move(y+1, 0)
-  elif ch == curses.ascii.VT:       # ^k
-   if x == 0 and self._end_of_line(y) == 0:
-    self.win.deleteln()
-    self.text_delete_line(y)
-   else:
-    # first undo the effect of self._end_of_line
+    y+=1
+    x=0
     self.win.move(y, x)
+  elif ch == curses.ascii.BEL:         # ^g
+   log("got a control-g")
+   return True
+  elif ch in (10, 13):    # ^j ^m
+   if y < self.maxy:
+    y+=1
+    x=0
+    self.win.move(y, x)
+  elif ch == curses.ascii.VT:       # ^k
+   if x < len(self.text[y]):
     self.win.clrtoeol()
-    self.text_delete_line(y, x)
+    del self.text[y][x:]
+   else:
+    self.win.deleteln()
+    del self.text[y]
+#   self.win.move(y, x)
   elif ch == curses.ascii.FF:       # ^l
    self.win.refresh()
   elif ch in (curses.ascii.SO, curses.KEY_DOWN):   # ^n
    if y < self.maxy:
-    self.win.move(y+1, x)
-    if x > self._end_of_line(y+1):
-     self.win.move(y+1, self._end_of_line(y+1))
+    y+=1
+    x=len(self.text[y]) if x > len(self.text[y]) else x
+    self.win.move(y, x)
+   else:
+    pass
   elif ch == curses.ascii.SI:       # ^o
    self.win.insertln()
-   self.text_insert_line(y)
+   self.text.insert(y, [])
   elif ch in (curses.ascii.DLE, curses.KEY_UP):    # ^p
    if y > 0:
-    self.win.move(y-1, x)
-    if x > self._end_of_line(y-1):
-     self.win.move(y-1, self._end_of_line(y-1))
+    y-=1
+    x=len(self.text[y]) if x > len(self.text[y]) else x
+    self.win.move(y, x)
+   else:
+    pass
+  elif ch == curses.KEY_HOME:
+   y=0
+   x=len(self.text[y]) if x > len(self.text[y]) else x
+   self.win.move(y, x)
+  elif ch == curses.KEY_END:
+   y=len(self.text)
+#   x=len(self.text[y]) if x > len(self.text[y]) else x
+   self.win.move(y,x)
+  elif ch == curses.KEY_F2:
+   if self.externalEdit() == None:
+    self.setSStatus("No external editor found.")
+   else:
+    return True    
+  elif ch>31 and ch<256:
+   ch = self.getunicode(ch)
+   if y < self.maxy or x < self.maxx:
+    self.text_insert(y, x, ch)
+    self.win.addstr(y, 0, ''.join(self.text[y]))
+    if x<self.maxx:
+     x+=1
+    else:
+     x=0
+     y+=1
+    self.win.move(y, x)
+#    log("do_command: ch=%s, currentLine=%s" % (ch,self.text[y]))
+  self.draw()
   return False
 
  def gather(self):
   tmp = [''] * len(self.text)
-  # convert each line to curses.ascii and join to a single string
   for y in xrange(len(self.text)):
-   tmp[y] = ''.join([chr(curses.ascii.ascii(ch)) for ch in self.text[y]])
-   if self.stripspaces:
-    tmp[y] = tmp[y].rstrip()
+   tmp[y] = ''.join(self.text[y])
+   tmp[y] = tmp[y].rstrip()
   return '\n'.join(tmp).strip()
 
  def clear(self):
@@ -483,17 +495,63 @@ class naEditbox(object):
   self.win.move(0, 0)
  
  def draw(self):
-  for y in xrange(len(self.text)):
-   if len(self.text[y]) > 0:
-    self.win.addstr(y, 0, ''.join([chr(curses.ascii.ascii(ch)) for ch in self.text[y]]))
-   else:
-    self.win.move(y, 0)
-   self.win.clrtoeol()
-
+  y,x=self.win.getyx()
+  l = len(self.text)
+#  log("edit:draw:top y=%d, x=%d, l=%d" % (y,x,l))
+  if l < self.maxy:
+   for i in xrange(l):
+    self.win.move(i, 0)
+    self.win.clrtoeol()
+    self.win.addstr(i, 0, ''.join(self.text[i]))
+   self.win.move(y, x)
+  else:
+   for i in xrange(l-self.maxy):
+    self.win.move(i, 0)
+    self.win.clrtoeol()
+    self.win.addstr(i, 0, ''.join(self.text[i]))
+   self.win.move(y, x)
+  self.win.refresh()
+  
+ def externalEdit(self):
+  if self.base.config.editor:
+   e=self.base.config.editor
+  elif os.environment.get("EDITOR"):
+   e=os.environment.get("EDITOR")
+  else:
+   return None
+  tempfile="/tmp/squigglitz"
+  open(tempfile,"wb").write(self.gather())
+  cmd="%s %s" % (e,tempfile)
+  os.system(cmd)
+  fh=open(tempfile,"rb")
+  self.text=fh.readlines()
+  fh.close()
+  os.remove(tempfile)
+  return self.text
+ 
+ def getunicode(self, c):
+  tc = u' '
+  buf = ''
+  done = False
+  nc = chr(c)
+  #   log("getunicode: in while nc=%d" % (ord(nc),))
+  buf+=nc
+  if ord(nc) in (194, 195):
+   nc = chr(self.win.getch())
+   #    log("getunicode: inside if test, nc%d" % (ord(nc),))
+   buf+=nc
+  #   log("getunicode: in while have buf=%s" % (buf,))
+  try:
+   tc = buf.decode()
+   done = True
+  except:
+   pass
+  log("getunicode: tc=%s, buf=%s, nc=%d buflen=%d buf[0]=%d" % (tc, buf, ord(nc), len(buf), ord(buf[0])))
+  return tc
+                                          
  def edit(self):
   self.win.clear()
-  text=list(self.default)
-  "Edit in the widget window and collect the results."
+  text=list(self.value)
   while 1:
    if text!=None and len(text)>0:
     ch=ord(text.pop(0))
@@ -505,34 +563,13 @@ class naEditbox(object):
      time.sleep(0.02)
      continue
    o_ch = ch
-   if self.validate:
-    ch = self.validate(ch)
-   if ch:
-    if self.do_command(ch):
-     break
-   if self.callback:
-    if self.callback(o_ch):
-     break
+   if self.do_command(ch):
+    break
    if text==-1:
     self.win.move(0,0)
     self.win.refresh()
     text=None
   return self.gather()
-
- def edit_one(self, ch=None):
-  """Edit one character in the widget window. If done (exit or enter pressed on
-     single line textbox), return True"""
-  status = False
-  if ch == None: ch = self.win.getch()
-  o_ch = ch
-  if self.validate: 
-   ch = self.validate(ch)
-  if ch: 
-   if self.do_command(ch):
-     return True 
-  if self.callback:
-   status = self.callback(o_ch)
-  return status
 
 class Listbox(GuiObject):
  """Listbox

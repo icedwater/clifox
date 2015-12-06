@@ -51,9 +51,6 @@ class forms(object):
 
  def gListbox(self,**kw):
   log("gListbox:called:",str(kw))
-#  kw['screen']=self.screen
-#  kw['maxy']=self.maxy
-#  kw['maxx']=self.maxx
   ret=None
   try:
    self.save()
@@ -89,7 +86,7 @@ class forms(object):
   try:
    self.restore()
   except:
-   pass
+   log("Error: restoring screen.")
   return ret
 
  def gTree(self,params,**kw):
