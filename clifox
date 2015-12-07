@@ -640,7 +640,7 @@ used, e.g. when reading a webpage as a whole document.
   if self.screenPos<0 and self.screenNum>0:
    self.screenPos=self.maxy
    self.prevScreen()
-  elif self.screenNum==0 and self.screenPos<=0:
+  elif self.screenNum==0 and self.screenPos<0:
    self.screenPos=0
    self.setStatus("StartOfPage,%d,%d,$url" % (self.screenNum,self.screenPos,))
    self.screen.move(self.screenPos,self.screenPosX)
