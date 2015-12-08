@@ -746,15 +746,17 @@ continue;
     return tabs;
 };
 clifox.kill = function() {
-//clifox.accObs.kill();
-//delete clifox.accObs;
+if(clifox.accObs) {
+clifox.accObs.kill();
+delete clifox.accObs;
+}
     clifox.obs.kill();
     delete clifox.obs;
     clifox.gl.kill();
     delete clifox.gl;
 };
 clifox.init = function() {
-//clifox.accObs=new clifox.accObserver();
+clifox.accObs=new clifox.accObserver();
     clifox.obs = new clifox.observer();
     clifox.gl = new clifox.GuiListener();
     if (!clifox.fm) {
