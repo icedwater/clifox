@@ -45,9 +45,9 @@ var thread = Components.classes["@mozilla.org/thread-manager;1"]
 
 bugs needing removal:
 
-Radio buttons not working.
+Done. Radio buttons not working.
 
-Select listboxes not working.
+Done. Select listboxes not working.
 
 Number sign tags not being honoured on page fetching.
 
@@ -59,3 +59,16 @@ Footnote numbering not being show on the individual footnotes.
 
 The above four items can all be easily seen on the python 2 reference
 library module pages.
+
+Done. Top of page beep occurring on moving to top line not trying to go up
+from there.
+
+Some anchor tags not showing tags text such as settings and profile on
+github and wordpress sites.
+
+Not being returned back to link and position of page previously on
+after returning from following a link.
+
+Js password fields not being caught and displayed in input fields such
+as bugzilla.redhat.com.
+
